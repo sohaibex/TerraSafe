@@ -25,6 +25,11 @@
         }
     }
 
+    &-center{
+      display: flex;
+      gap: 35px;
+    }
+
     /* Styles for the overlay */
   .gofundme-overlay {
     position: fixed;
