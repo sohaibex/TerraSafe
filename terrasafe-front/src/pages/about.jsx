@@ -13,7 +13,6 @@ export default function About() {
         <div className='about-image'>
             <img src='/images/image1.jpg' alt='seisme'></img>
         </div>
-          
       </div>
     </div>
   );

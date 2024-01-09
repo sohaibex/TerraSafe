@@ -23,7 +23,7 @@ export default class Home extends PureComponent {
           </div>
           <div className='home-container-right'>
             <div id='map' style={{ height: '100vh' }}></div>
-          </div>
+          </div>  
         </div>  
       </div>
     );
