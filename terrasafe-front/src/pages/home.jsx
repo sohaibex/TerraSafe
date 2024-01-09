@@ -43,18 +43,36 @@ export default class Home extends PureComponent {
       shadowSize: [41, 41],
     });
 
-    data.features.forEach((feature) => {
+    const hoverIcon = L.icon({
+      iconUrl: "/images/marker-icon-red.png",
+    });
+
+    const markers = {};
+    let bounds = L.latLngBounds(); // Initialize bounds for the map
+
+    data.features.forEach((feature, index) => {
       const { coordinates } = feature.geometry;
       const { mag, place } = feature.properties;
 
-      L.marker([coordinates[1], coordinates[0]], { icon: defaultIcon })
+      const marker = L.marker([coordinates[1], coordinates[0]], {
+        icon: defaultIcon,
+      })
         .addTo(map)
         .bindPopup(
           `<strong>Magnitude:</strong> ${mag}<br><strong>Location:</strong> ${place}`
         );
-    });
-  };
 
+      markers[index] = { marker, defaultIcon, hoverIcon };
+
+      bounds.extend(marker.getLatLng()); // Extend the bounds to include each marker's position
+    });
+
+    if (data.features.length > 0) {
+      map.fitBounds(bounds); // Adjust the map view to the bounds of all markers
+    }
+
+    this.setState({ markers });
+  };
   handleFilterChange = (e) => {
     this.setState({ filterText: e.target.value });
   };
@@ -90,7 +108,11 @@ export default class Home extends PureComponent {
       const date = new Date(time).toLocaleString();
 
       return (
-        <div key={index}>
+        <div
+          key={index}
+          onMouseEnter={() => this.handleMarkerHover(index, true)}
+          onMouseLeave={() => this.handleMarkerHover(index, false)}
+        >
           <p>
             <strong>Magnitude:</strong> {mag}
           </p>
@@ -103,6 +125,15 @@ export default class Home extends PureComponent {
         </div>
       );
     });
+  };
+
+  handleMarkerHover = (index, isHovered) => {
+    const { markers } = this.state;
+    if (markers[index]) {
+      markers[index].marker.setIcon(
+        isHovered ? markers[index].hoverIcon : markers[index].defaultIcon
+      );
+    }
   };
 
   render() {

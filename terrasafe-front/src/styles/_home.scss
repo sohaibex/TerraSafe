@@ -50,6 +50,10 @@
                 p {
                     margin: 5px 0;
                 }
+                                &:hover {
+                                    background-color: #eef; // Change color on hover
+                                    cursor: pointer;
+                                }
             }
         }
 
