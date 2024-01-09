@@ -21,7 +21,7 @@ export default class Home extends PureComponent {
 
   fetchEarthquakeData = (map) => {
     fetch(
-      "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson"
+      "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson"
     )
       .then((response) => response.json())
       .then((data) => {
