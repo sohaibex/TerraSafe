@@ -1,0 +1,14 @@
+.home{
+    &-container{
+        
+        display: flex;
+
+        &-left{
+            flex: 1;
+        }
+
+        &-right{
+            flex: 4;
+        }
+    }
+}
