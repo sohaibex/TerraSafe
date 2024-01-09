@@ -36,8 +36,8 @@ export default function Header() {
         <a href='/' className='header-link'>TerraSafe</a>
       </div>
       <div className='header-center'>
-        <a href="/signup" className='header-link'>À propos</a>
-        <a href="/signup" className='header-link'>Historique</a>
+        <a href="/about" className='header-link'>À propos</a>
+        <a href="/history" className='header-link'>Historique</a>
         <a href="/signup" className='header-link'>Faire un don</a>
       </div>
       <div className='header-right'>

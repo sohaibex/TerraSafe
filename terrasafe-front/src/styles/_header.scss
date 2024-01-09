@@ -1,20 +1,29 @@
-.header{
-    background: $header-bg;
-    padding: 2% 5%;
-    display: flex;
-    justify-content: space-between;
+.header {
+  background: $header-bg;
+  padding: 2% 5%;
+  display: flex;
+  justify-content: space-between;
 
-    &-link{
-        color: aliceblue;
-        text-decoration: none;
-        font-size: 20px;
+  font-family: 'Arial', sans-serif;
+
+  &-link {
+    color: aliceblue;
+    text-decoration: none;
+    font-size: 18px;
+  }
+
+  &-right {
+    display: flex;
+    gap: 20px;
+
+    .fa-user,
+    .fa-user-plus {
+      font-size: 24px;
     }
-    &-right{
-        display: flex;
-        gap: 20px;
-    }
-    &-center{
-        display: flex;
-        gap: 40px;
-    }
+  }
+
+  &-center {
+    display: flex;
+    gap: 40px;
+  }
 }
