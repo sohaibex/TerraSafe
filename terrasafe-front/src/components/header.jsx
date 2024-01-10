@@ -24,7 +24,7 @@ export default function Header() {
   const handleLogout = () => {               
     signOut(auth).then(() => {
     // Sign-out successful.
-        navigate("/");
+        navigate("/login");
         console.log("Signed out successfully")
     }).catch((error) => {
     // An error happened.
@@ -51,7 +51,7 @@ export default function Header() {
           {loggedIn ? (
             <>
               {/* Display other authenticated links */}
-              <a href="/" onClick={handleLogout} className='header-section-link'><i className="fa-solid fa-right-from-bracket"></i></a>
+              <a href="/login" onClick={handleLogout} className='header-section-link'><i className="fa-solid fa-right-from-bracket"></i></a>
             </>
           ) : (
             <>
@@ -65,11 +65,11 @@ export default function Header() {
       
 
       {showGoFundMePopUp && (
-      <div className="gofundme-overlay">
-        <span className="close-btn" onClick={() => setShowGoFundMePopUp(false)}>
-         <i class="fa-solid fa-xmark"></i>
-        </span>
-        <div className="gofundme-popup">
+        <div className="gofundme-overlay" onClick={() => setShowGoFundMePopUp(false)}>
+          <span className="close-btn">
+            <i className="fa-solid fa-xmark"></i>
+          </span>
+          <div className="gofundme-popup">
             <iframe
               src="https://www.gofundme.com/f/test-for-project-school-dont-donate/widget/large?sharesheet=firstTime"
               frameBorder="0"
@@ -77,9 +77,9 @@ export default function Header() {
               height="100%"
               title="Donation"
             ></iframe>
+          </div>
         </div>
-      </div>
-    )}
+      )}
     </header>
 
   );

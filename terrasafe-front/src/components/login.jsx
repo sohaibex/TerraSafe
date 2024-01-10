@@ -27,7 +27,7 @@ const Login = () => {
  
     return(
         <>
-            <main >        
+            <main className='login-main'>        
                 <section>
                     <div>                                            
                         <h1> TerraSafe - Connexion</h1>                          

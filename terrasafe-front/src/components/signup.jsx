@@ -31,7 +31,7 @@ const Signup = () => {
     }
  
   return (
-    <main >        
+    <main  className='login-main'>        
         <section>
             <div>
                 <div>                  
