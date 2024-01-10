@@ -9,6 +9,11 @@ export default class Home extends PureComponent {
     earthquakes: [],
     filterText: "",
     sortByMagnitude: false,
+    currentPage: 1,
+    itemsPerPage: 10,
+    showModal: false,
+    selectedEarthquake: null,
+    earthquakeData: {},
   };
 
   componentDidMount() {
@@ -84,20 +89,35 @@ export default class Home extends PureComponent {
   };
 
   filterAndSortEarthquakes = () => {
-    const { earthquakes, filterText, sortByMagnitude } = this.state;
-
-    return earthquakes
+    const {
+      earthquakes,
+      filterText,
+      sortByMagnitude,
+      currentPage,
+      itemsPerPage,
+    } = this.state;
+    const filtered = earthquakes
       .filter((earthquake) =>
         earthquake.properties.place
           .toLowerCase()
           .includes(filterText.toLowerCase())
       )
-      .sort((a, b) => {
-        if (sortByMagnitude) {
-          return b.properties.mag - a.properties.mag;
-        }
-        return a.properties.mag - b.properties.mag;
-      });
+      .sort((a, b) =>
+        sortByMagnitude
+          ? b.properties.mag - a.properties.mag
+          : a.properties.mag - b.properties.mag
+      );
+
+    // Calculate the indexes for slicing the array
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+
+    return filtered.slice(indexOfFirstItem, indexOfLastItem);
+  };
+
+  // Handle page change
+  handlePageChange = (pageNumber) => {
+    this.setState({ currentPage: pageNumber });
   };
 
   renderEarthquakeData = () => {
@@ -110,21 +130,38 @@ export default class Home extends PureComponent {
       return (
         <div
           key={index}
+          className="earthquake-detail"
           onMouseEnter={() => this.handleMarkerHover(index, true)}
           onMouseLeave={() => this.handleMarkerHover(index, false)}
         >
-          <p>
-            <strong>Magnitude:</strong> {mag}
-          </p>
-          <p>
-            <strong>Location:</strong> {place}
-          </p>
-          <p>
-            <strong>Time:</strong> {date}
-          </p>
+          <div className="magnitude">Magnitude: {mag}</div>
+          <div className="location">{place}</div>
+          <div className="time">{date}</div>
         </div>
       );
     });
+  };
+
+  renderPagination = () => {
+    const { earthquakes, itemsPerPage, currentPage } = this.state;
+    const pageNumbers = [];
+    for (let i = 1; i <= Math.ceil(earthquakes.length / itemsPerPage); i++) {
+      pageNumbers.push(i);
+    }
+
+    return (
+      <div className="pagination">
+        {pageNumbers.map((number) => (
+          <button
+            key={number}
+            onClick={() => this.handlePageChange(number)}
+            className={`page-button ${currentPage === number ? "active" : ""}`} // Apply the page-button class
+          >
+            {number}
+          </button>
+        ))}
+      </div>
+    );
   };
 
   handleMarkerHover = (index, isHovered) => {
@@ -135,27 +172,26 @@ export default class Home extends PureComponent {
       );
     }
   };
-
   render() {
     return (
       <div className="home">
         <div className="home-container">
           <div
             className="home-container-left"
-            style={{ overflowY: "scroll", maxHeight: "100vh", padding: "10px" }}
+            style={{ overflowY: "auto", maxHeight: "100vh", padding: "20px" }}
           >
             <h1>TerraSafe</h1>
-            <p>Home Page</p>
+
             <input
               type="text"
               placeholder="Filter by city or country"
               value={this.state.filterText}
               onChange={this.handleFilterChange}
-              style={{ marginBottom: "10px", width: "100%" }}
+              style={{ marginBottom: "20px", width: "100%" }}
             />
             <button
               onClick={this.toggleSortByMagnitude}
-              style={{ marginBottom: "20px" }}
+              className="sort-button"
             >
               {this.state.sortByMagnitude
                 ? "Sort by Smallest Magnitude"
@@ -163,6 +199,7 @@ export default class Home extends PureComponent {
             </button>
             <div style={{ marginTop: "20px" }}>
               {this.renderEarthquakeData()}
+              {this.renderPagination()}
             </div>
           </div>
           <div className="home-container-right">
