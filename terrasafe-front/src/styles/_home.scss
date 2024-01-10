@@ -1,0 +1,124 @@
+$primary-color: #055ebe; // Main theme color
+$hover-color: #087af3fe; // Hover state color
+$background-color: #e8e8e8; // Background color for left container
+$font-color: #333; // Default font color
+$heading-font-size: 24px; // Font size for headings
+$input-border-color: #ccc; // Border color for input fields
+$detail-background: #ffffff; // Background color for earthquake details
+$detail-hover-background: #f5f5f5; // Hover background for details
+$detail-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); // Shadow for details
+$detail-hover-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); // Hover shadow
+$pagination-button-color: #f8f8f8; // Background color for pagination buttons
+$map-background: #e9ecef; // Background color for the map
+
+.home {
+    height: 100vh;
+    display: flex;
+    align-items: stretch;
+
+    &-container {
+        width: 100%;
+        display: flex;
+        overflow: hidden;
+
+        &-left {
+            flex: 0 0 25%;
+            background-color: $background-color;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            z-index: 2;
+
+            h1 {
+                color: $primary-color;
+                font-size: $heading-font-size;
+                margin-bottom: 20px;
+                font-weight: 700;
+            }
+
+            input {
+                margin-bottom: 20px;
+                padding: 10px;
+                border: 2px solid $input-border-color;
+                border-radius: 5px;
+                font-size: 16px;
+            }
+
+            .sort-button {
+                padding: 12px;
+                background-color: $primary-color;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-size: 16px;
+                cursor: pointer;
+
+                &:hover {
+                    background-color: $hover-color;
+                }
+            }
+
+            .pagination {
+                display: flex;
+                justify-content: center;
+                margin-top: 20px;
+
+                .page-button {
+                    padding: 5px 10px;
+                    margin: 0 5px;
+                    border: 1px solid $input-border-color;
+                    background-color: $pagination-button-color;
+                    cursor: pointer;
+                    transition: background-color 0.3s;
+
+                    &:hover,
+                    &.active {
+                        background-color: $primary-color;
+                        color: white;
+                    }
+                }
+            }
+
+            .earthquake-detail {
+                background-color: $detail-background;
+                margin-bottom: 15px;
+                padding: 15px;
+                border-radius: 8px;
+                box-shadow: $detail-shadow;
+
+                &:hover {
+                    background-color: $detail-hover-background;
+                    box-shadow: $detail-hover-shadow;
+                }
+
+                .magnitude {
+                    font-size: 18px;
+                    color: #d9534f;
+                    margin-bottom: 8px;
+                }
+
+                .location {
+                    font-size: 16px;
+                    margin-bottom: 8px;
+                }
+
+                .time {
+                    font-size: 14px;
+                    color: #6c757d;
+                }
+            }
+        }
+
+        &-right {
+            flex: 3;
+            background-color: $map-background;
+
+            #map {
+                height: 100%;
+                width: 100%;
+            }
+        }
+    }
+}
