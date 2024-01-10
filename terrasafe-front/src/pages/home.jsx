@@ -4,6 +4,8 @@ import "leaflet/dist/leaflet.css";
 import markerIconPng from "leaflet/dist/images/marker-icon.png";
 import markerIconShadow from "leaflet/dist/images/marker-shadow.png";
 
+import Chatbot from '../chatbot';
+
 export default class Home extends PureComponent {
   state = {
     earthquakes: [],
@@ -173,6 +175,9 @@ export default class Home extends PureComponent {
     }
   };
   render() {
+
+    const { showChatbot } = this.state;
+
     return (
       <div className="home">
         <div className="home-container">
@@ -204,6 +209,17 @@ export default class Home extends PureComponent {
           </div>
           <div className="home-container-right">
             <div id="map" style={{ height: "100vh" }}></div>
+            <div
+              className="chatbot-toggle-btn"
+              onClick={() => this.setState({ showChatbot: !showChatbot })}
+            >
+              <i className="fa-solid fa-robot"></i>
+            </div>
+            {showChatbot && (
+              <div className="chatbot-overlay">
+                <Chatbot />
+              </div>
+            )}
           </div>
         </div>
       </div>
