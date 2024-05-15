@@ -7,12 +7,12 @@ import { getAuth } from 'firebase/auth';
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-    apiKey: process.env.FIREBASE_API_KEY,
-    authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.FIREBASE_APP_ID
+    apiKey: "AIzaSyD3nryG0OUz5ECd7iiRe0zkCEpQ-F_sW-c",
+    authDomain: "terrasafe-a526c.firebaseapp.com",
+    projectId: "terrasafe-a526c",
+    storageBucket: "terrasafe-a526c.appspot.com",
+    messagingSenderId: "785754992090",
+    appId: "1:785754992090:web:e02045714a7002c75de4e3"
 };
 
 const app = initializeApp(firebaseConfig);

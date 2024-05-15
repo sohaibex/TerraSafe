@@ -21,13 +21,13 @@ export default function Header() {
 
   const navigate = useNavigate();
 
-  const handleLogout = () => {               
+  const handleLogout = () => {
     signOut(auth).then(() => {
-    // Sign-out successful.
-        navigate("/login");
-        console.log("Signed out successfully")
+      // Sign-out successful.
+      navigate("/login");
+      console.log("Signed out successfully");
     }).catch((error) => {
-    // An error happened.
+      // An error happened.
     });
   }
 
@@ -62,14 +62,13 @@ export default function Header() {
           )}
         </div>
       </div>
-      
 
       {showGoFundMePopUp && (
         <div className="gofundme-overlay" onClick={() => setShowGoFundMePopUp(false)}>
-          <span className="close-btn">
-            <i className="fa-solid fa-xmark"></i>
-          </span>
           <div className="gofundme-popup">
+            <span className="close-btn" onClick={() => setShowGoFundMePopUp(false)}>
+              <i className="fa-solid fa-xmark"></i>
+            </span>
             <iframe
               src="https://www.gofundme.com/f/test-for-project-school-dont-donate/widget/large?sharesheet=firstTime"
               frameBorder="0"
@@ -81,6 +80,5 @@ export default function Header() {
         </div>
       )}
     </header>
-
   );
 }

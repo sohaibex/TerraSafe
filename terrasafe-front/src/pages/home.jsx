@@ -16,6 +16,9 @@ export default class Home extends PureComponent {
     showModal: false,
     selectedEarthquake: null,
     earthquakeData: {},
+    ingredientChecklist: ["Des tentes", "Cheeseburgers", "Insuline pour les Diabètes"],
+    additionalNeeds: "",
+    markers: {}
   };
 
   componentDidMount() {
@@ -55,31 +58,89 @@ export default class Home extends PureComponent {
     });
 
     const markers = {};
-    let bounds = L.latLngBounds(); // Initialize bounds for the map
+    let bounds = L.latLngBounds();
 
     data.features.forEach((feature, index) => {
       const { coordinates } = feature.geometry;
       const { mag, place } = feature.properties;
 
+      const popupContent = `
+        <strong>Magnitude:</strong> ${mag}<br>
+        <strong>Location:</strong> ${place}<br>
+        <form id="form-${index}">
+          <div class="ingredients-list">
+            <strong>Ingrédients nécessaires :</strong><br>
+            ${this.state.ingredientChecklist.map(
+              (item) => `
+                <div class="ingredient-item">
+                  <input type="checkbox" id="check-${item}-${index}" name="ingredient" value="${item}" />
+                  <label for="check-${item}-${index}" id="label-${item}-${index}">${item}</label><br>
+                </div>
+              `
+            ).join('')}
+          </div>
+          <div class="additional-needs">
+            <strong>Additional Needs:</strong><br>
+            <input type="text" id="additional-${index}" name="additionalNeeds" /><br>
+          </div>
+          <button type="submit">Submit</button>
+        </form>
+      `;
+
       const marker = L.marker([coordinates[1], coordinates[0]], {
         icon: defaultIcon,
       })
         .addTo(map)
-        .bindPopup(
-          `<strong>Magnitude:</strong> ${mag}<br><strong>Location:</strong> ${place}`
-        );
+        .bindPopup(popupContent);
 
       markers[index] = { marker, defaultIcon, hoverIcon };
 
-      bounds.extend(marker.getLatLng()); // Extend the bounds to include each marker's position
+      bounds.extend(marker.getLatLng());
     });
 
     if (data.features.length > 0) {
-      map.fitBounds(bounds); // Adjust the map view to the bounds of all markers
+      map.fitBounds(bounds);
     }
 
     this.setState({ markers });
+
+    // Attach event listeners after popups have been added to the DOM
+    setTimeout(() => {
+      data.features.forEach((feature, index) => {
+        this.attachIngredientChangeHandlers(index);
+      });
+    }, 0);
   };
+
+  attachIngredientChangeHandlers = (index) => {
+    const form = document.getElementById(`form-${index}`);
+    if (form) {
+      this.state.ingredientChecklist.forEach((item) => {
+        const checkbox = document.getElementById(`check-${item}-${index}`);
+        if (checkbox) {
+          checkbox.addEventListener('change', (event) => this.handleIngredientChange(event, index, item));
+        }
+      });
+    }
+  };
+
+  handleIngredientChange = (event, index, item) => {
+    const label = document.getElementById(`label-${item}-${index}`);
+    if (label) {
+      label.style.textDecoration = event.target.checked ? 'line-through' : 'none';
+    }
+  };
+
+  handleSubmit = (event, index) => {
+    event.preventDefault();
+    const form = document.getElementById(`form-${index}`);
+    const ingredients = Array.from(form.querySelectorAll('input[name="ingredient"]:checked')).map(el => el.value);
+    const additionalNeeds = form.querySelector(`#additional-${index}`).value;
+    console.log(`Ingredients for marker ${index}:`, ingredients);
+    console.log(`Additional needs for marker ${index}:`, additionalNeeds);
+    // Add code to save this data to the database
+  };
+
   handleFilterChange = (e) => {
     this.setState({ filterText: e.target.value });
   };
@@ -110,14 +171,12 @@ export default class Home extends PureComponent {
           : a.properties.mag - b.properties.mag
       );
 
-    // Calculate the indexes for slicing the array
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
 
     return filtered.slice(indexOfFirstItem, indexOfLastItem);
   };
 
-  // Handle page change
   handlePageChange = (pageNumber) => {
     this.setState({ currentPage: pageNumber });
   };
@@ -157,7 +216,7 @@ export default class Home extends PureComponent {
           <button
             key={number}
             onClick={() => this.handlePageChange(number)}
-            className={`page-button ${currentPage === number ? "active" : ""}`} // Apply the page-button class
+            className={`page-button ${currentPage === number ? "active" : ""}`}
           >
             {number}
           </button>
@@ -174,8 +233,8 @@ export default class Home extends PureComponent {
       );
     }
   };
-  render() {
 
+  render() {
     const { showChatbot } = this.state;
 
     return (
