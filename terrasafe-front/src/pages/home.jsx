@@ -3,9 +3,9 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import markerIconPng from "leaflet/dist/images/marker-icon.png";
 import markerIconShadow from "leaflet/dist/images/marker-shadow.png";
-import Chatbot from '../chatbot';
-import PopupContent from '../components/PopupContent'; // Import the new component
-import ReactDOMServer from 'react-dom/server';
+import Chatbot from "../chatbot";
+import PopupContent from "../components/PopupContent";
+import ReactDOM from "react-dom";
 
 export default class Home extends PureComponent {
   state = {
@@ -17,9 +17,13 @@ export default class Home extends PureComponent {
     showModal: false,
     selectedEarthquake: null,
     earthquakeData: {},
-    ingredientChecklist: ["Des tentes", "Cheeseburgers", "Insuline pour les Diabètes"],
+    ingredientChecklist: [
+      "Des tentes",
+      "Cheeseburgers",
+      "Insuline pour les Diabètes",
+    ],
     additionalNeeds: "",
-    markers: {}
+    markers: {},
   };
 
   componentDidMount() {
@@ -65,20 +69,22 @@ export default class Home extends PureComponent {
       const { coordinates } = feature.geometry;
       const { mag, place } = feature.properties;
 
-      const popupContent = ReactDOMServer.renderToString(
+      const popupContainer = document.createElement("div");
+      ReactDOM.render(
         <PopupContent
           feature={feature}
           index={index}
           ingredientChecklist={this.state.ingredientChecklist}
           onSubmit={this.handleSubmit}
-        />
+        />,
+        popupContainer
       );
 
       const marker = L.marker([coordinates[1], coordinates[0]], {
         icon: defaultIcon,
       })
         .addTo(map)
-        .bindPopup(popupContent);
+        .bindPopup(popupContainer);
 
       markers[index] = { marker, defaultIcon, hoverIcon };
 
@@ -104,7 +110,7 @@ export default class Home extends PureComponent {
     const { ingredients, additionalNeeds, images } = formState;
     const stuffNeededToHelp = {
       ...ingredients,
-      additionalNeeds
+      additionalNeeds,
     };
 
     const latitude = coordinates[1];
@@ -113,15 +119,15 @@ export default class Home extends PureComponent {
     const jsonData = {
       current_location: {
         Latitude: `${latitude} / N ${this.convertDecimalToDMS(latitude)}`,
-        Longitude: `${longitude} / E ${this.convertDecimalToDMS(longitude)}`
+        Longitude: `${longitude} / E ${this.convertDecimalToDMS(longitude)}`,
       },
       infoList: [
         {
           location: this.state.earthquakes[index].properties.place,
           stuffNeededToHelp: stuffNeededToHelp,
-          images: images.map(image => ({ url: URL.createObjectURL(image) })),
-        }
-      ]
+          images: images.map((image) => ({ url: URL.createObjectURL(image) })),
+        },
+      ],
     };
 
     console.log("JSON Data:", jsonData);

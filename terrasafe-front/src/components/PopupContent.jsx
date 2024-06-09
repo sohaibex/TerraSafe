@@ -7,7 +7,7 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit }) => {
       return acc;
     }, {}),
     additionalNeeds: "",
-    images: []
+    images: [],
   });
 
   const handleChange = (e) => {
@@ -38,13 +38,15 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    console.log("hello world ");
     onSubmit(formState, index, feature.geometry.coordinates);
   };
 
   return (
     <form onSubmit={handleSubmit}>
       <div className="ingredients-list">
-        <strong>Ingrédients nécessaires :</strong><br />
+        <strong>Ingrédients nécessaires :</strong>
+        <br />
         {ingredientChecklist.map((item) => (
           <div className="ingredient-item" key={item}>
             <input
@@ -54,27 +56,34 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit }) => {
               checked={formState.ingredients[item]}
               onChange={handleChange}
             />
-            <label htmlFor={`check-${item}-${index}`}>{item}</label><br />
+            <label htmlFor={`check-${item}-${index}`}>{item}</label>
+            <br />
           </div>
         ))}
       </div>
       <div className="additional-needs">
-        <strong>Additional Needs:</strong><br />
+        <strong>Additional Needs:</strong>
+        <br />
         <input
           type="text"
           name="additionalNeeds"
           value={formState.additionalNeeds}
           onChange={handleChange}
-        /><br /><br />
+        />
+        <br />
+        <br />
       </div>
       <div className="picture-options">
-        <strong>Envoyer des photos Options:</strong><br />
+        <strong>Envoyer des photos Options:</strong>
+        <br />
         <input
           type="file"
           accept="image/*"
           multiple
           onChange={handleImageUpload}
-        /><br /><br />
+        />
+        <br />
+        <br />
       </div>
       <button type="submit">Submit</button>
     </form>
