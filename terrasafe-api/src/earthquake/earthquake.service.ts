@@ -70,61 +70,63 @@ export class EarthquakeService {
     return earthquakes.docs.map((doc) => doc.data());
   }
 
-  async addHelpRequest(earthquakeId: string, helpRequest: any) {
+  async addHelpRequest(
+    earthquakeId: string,
+    helpRequest: any,
+    currentLocation: { latitude: number; longitude: number },
+    file?: Express.Multer.File,
+  ) {
+    console.log('Received helpRequest:', helpRequest);
+    console.log('Received currentLocation:', currentLocation);
+    console.log('Received file:', file);
+
     const ref = this.db
       .collection('Earthquakes')
       .doc(earthquakeId)
       .collection('HelpRequests')
       .doc();
-    await ref.set(helpRequest);
-    return ref.id;
-  }
 
-  async addImageAndAnalyse(
-    earthquakeId: string,
-    requestId: string,
-    imageUrl: string,
-  ) {
-    const requestRef = this.db
-      .collection('Earthquakes')
-      .doc(earthquakeId)
-      .collection('HelpRequests')
-      .doc(requestId);
-    const requestDoc = await requestRef.get();
+    try {
+      if (file) {
+        console.log('File detected. Analyzing and uploading...');
+        // Analyze the image using the GCP function
+        const analysedDescription = await this.analyseImage(file);
 
-    if (!requestDoc.exists) {
-      throw new Error('Help request not found');
+        // Upload the image to GCP bucket
+        const imageUrlInBucket = await this.uploadImageToBucket(file);
+
+        // Add the image URL and analysis description to the help request
+        helpRequest.images = helpRequest.images || [];
+        helpRequest.images.push(imageUrlInBucket);
+        helpRequest.analysedImageDescription = analysedDescription;
+        console.log('Image analysis and upload complete.');
+      }
+
+      // Add current location to the help request
+      helpRequest.currentLocation = new admin.firestore.GeoPoint(
+        currentLocation.latitude,
+        currentLocation.longitude,
+      );
+
+      console.log('Setting help request in Firestore...');
+      await ref.set(helpRequest);
+      console.log('Help request set successfully in Firestore.');
+      return ref.id;
+    } catch (error) {
+      console.error('Error in addHelpRequest:', error);
+      throw new HttpException(
+        'Failed to add help request',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
-
-    const requestData = requestDoc.data();
-    requestData.images = requestData.images || [];
-
-    // Analyze the image using the GCP function
-    const analysedDescription = await this.analyseImage(imageUrl);
-
-    // Upload the image to GCP bucket
-    const imageUrlInBucket = await this.uploadImageToBucket(imageUrl);
-
-    // Add the image URL and analysis description to the help request
-    requestData.images.push(imageUrlInBucket);
-    requestData.analysedImageDescription = analysedDescription;
-    await requestRef.update(requestData);
-
-    return requestData;
   }
 
-  private async analyseImage(imageUrl: string): Promise<string> {
+  private async analyseImage(file: Express.Multer.File): Promise<string> {
     const form = new FormData();
-    form.append(
-      'file',
-      axios
-        .get(imageUrl, { responseType: 'stream' })
-        .then((response) => response.data),
-      {
-        filename: 'image.jpg',
-        contentType: 'image/jpeg',
-      },
-    );
+    form.append('file', file.buffer, {
+      filename: file.originalname,
+      contentType: file.mimetype,
+    });
 
     try {
       const response = await axios.post(
@@ -143,15 +145,15 @@ export class EarthquakeService {
     }
   }
 
-  private async uploadImageToBucket(imageUrl: string): Promise<string> {
-    const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-    const buffer = Buffer.from(response.data, 'binary');
+  private async uploadImageToBucket(
+    file: Express.Multer.File,
+  ): Promise<string> {
     const bucketName = 'earthquick-images';
-    const fileName = `${uuidv4()}.jpg`;
-    const file = this.storage.bucket(bucketName).file(fileName);
+    const fileName = `${uuidv4()}-${file.originalname}`;
+    const fileUpload = this.storage.bucket(bucketName).file(fileName);
 
-    await file.save(buffer, {
-      contentType: 'image/jpeg',
+    await fileUpload.save(file.buffer, {
+      contentType: file.mimetype,
     });
 
     return `https://storage.googleapis.com/${bucketName}/${fileName}`;

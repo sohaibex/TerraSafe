@@ -1,39 +1,45 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { EarthquakeService } from './earthquake.service';
 
 @Controller('earthquakes')
 export class EarthquakeController {
   constructor(private readonly earthquakeService: EarthquakeService) {}
 
-  // Endpoint to fetch and return all stored earthquakes
   @Get()
   async getEarthquakes() {
     return this.earthquakeService.fetchEarthquakes();
   }
 
-  // Endpoint to fetch earthquake data from the USGS API and store it in Firestore
   @Get('fetch-and-store')
   async fetchAndStoreEarthquakes() {
     return this.earthquakeService.fetchAndStoreEarthquakes();
   }
-
-  // Endpoint to add a help request to a specific earthquake
   @Post(':id/help-requests')
-  async addHelpRequest(@Param('id') id: string, @Body() helpRequest: any) {
-    return this.earthquakeService.addHelpRequest(id, helpRequest);
-  }
-
-  // Endpoint to add an image to a help request and analyze it
-  @Post(':id/help-requests/:requestId/images')
-  async addImageAndAnalyse(
+  @UseInterceptors(FileInterceptor('file'))
+  async addHelpRequest(
     @Param('id') id: string,
-    @Param('requestId') requestId: string,
-    @Body() body: { imageUrl: string },
+    @Body('helpRequest') helpRequest: string,
+    @Body('currentLocation') currentLocation: string,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.earthquakeService.addImageAndAnalyse(
+    console.log('Received helpRequest body:', helpRequest);
+    console.log('Received currentLocation body:', currentLocation);
+    const parsedHelpRequest = JSON.parse(helpRequest);
+    const parsedCurrentLocation = JSON.parse(currentLocation);
+    return this.earthquakeService.addHelpRequest(
       id,
-      requestId,
-      body.imageUrl,
+      parsedHelpRequest,
+      parsedCurrentLocation,
+      file,
     );
   }
 }
