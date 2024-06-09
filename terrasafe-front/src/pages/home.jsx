@@ -67,7 +67,6 @@ export default class Home extends PureComponent {
 
     data.features.forEach((feature, index) => {
       const { coordinates } = feature.geometry;
-      const { mag, place } = feature.properties;
 
       const popupContainer = document.createElement("div");
       ReactDOM.render(
@@ -110,28 +109,55 @@ export default class Home extends PureComponent {
     const { ingredients, additionalNeeds, images } = formState;
     const stuffNeededToHelp = {
       ...ingredients,
-      additionalNeeds,
+      [additionalNeeds]: false, // Adding additionalNeeds as a key with false value
     };
 
-    const latitude = coordinates[1];
-    const longitude = coordinates[0];
+    navigator.geolocation.getCurrentPosition(position => {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
 
-    const jsonData = {
-      current_location: {
-        Latitude: `${latitude} / N ${this.convertDecimalToDMS(latitude)}`,
-        Longitude: `${longitude} / E ${this.convertDecimalToDMS(longitude)}`,
-      },
-      infoList: [
-        {
-          location: this.state.earthquakes[index].properties.place,
-          stuffNeededToHelp: stuffNeededToHelp,
-          images: images.map((image) => ({ url: URL.createObjectURL(image) })),
-        },
-      ],
-    };
+        const helpRequest = {
+            stuffNeeded: stuffNeededToHelp,
+            images: [], // images will be handled as files in the form data
+            analysedImageDescription: "", // Add appropriate description if needed
+        };
 
-    console.log("JSON Data:", jsonData);
-  };
+        const currentLocation = {
+            latitude,
+            longitude
+        };
+
+        const formData = new FormData();
+        formData.append("helpRequest", JSON.stringify(helpRequest));
+        formData.append("current_location", JSON.stringify(currentLocation));
+        images.forEach((image, idx) => {
+            formData.append(`file${idx}`, image);
+        });
+
+        fetch(`/api/earthquakes/${index}/help-request`, {
+            method: "POST",
+            body: formData,
+        })
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error("Network response was not ok");
+            }
+            return response.json();
+        })
+        .then((data) => {
+            console.log("Success:", data);
+        })
+        .catch((error) => {
+            console.error("Error:", error);
+        });
+
+        console.log("Form Data:", formData);
+    }, error => {
+        console.error("Error getting current location:", error);
+        // Handle error getting location here
+    });
+};
+
 
   handleFilterChange = (e) => {
     this.setState({ filterText: e.target.value });
