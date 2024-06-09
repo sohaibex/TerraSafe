@@ -3,8 +3,9 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import markerIconPng from "leaflet/dist/images/marker-icon.png";
 import markerIconShadow from "leaflet/dist/images/marker-shadow.png";
-
 import Chatbot from '../chatbot';
+import PopupContent from '../components/PopupContent'; // Import the new component
+import ReactDOMServer from 'react-dom/server';
 
 export default class Home extends PureComponent {
   state = {
@@ -64,28 +65,14 @@ export default class Home extends PureComponent {
       const { coordinates } = feature.geometry;
       const { mag, place } = feature.properties;
 
-      const popupContent = `
-        <strong>Magnitude:</strong> ${mag}<br>
-        <strong>Location:</strong> ${place}<br>
-        <form id="form-${index}">
-          <div class="ingredients-list">
-            <strong>Ingrédients nécessaires :</strong><br>
-            ${this.state.ingredientChecklist.map(
-              (item) => `
-                <div class="ingredient-item">
-                  <input type="checkbox" id="check-${item}-${index}" name="ingredient" value="${item}" />
-                  <label for="check-${item}-${index}" id="label-${item}-${index}">${item}</label><br>
-                </div>
-              `
-            ).join('')}
-          </div>
-          <div class="additional-needs">
-            <strong>Additional Needs:</strong><br>
-            <input type="text" id="additional-${index}" name="additionalNeeds" /><br>
-          </div>
-          <button type="submit">Submit</button>
-        </form>
-      `;
+      const popupContent = ReactDOMServer.renderToString(
+        <PopupContent
+          feature={feature}
+          index={index}
+          ingredientChecklist={this.state.ingredientChecklist}
+          onSubmit={this.handleSubmit}
+        />
+      );
 
       const marker = L.marker([coordinates[1], coordinates[0]], {
         icon: defaultIcon,
@@ -103,42 +90,41 @@ export default class Home extends PureComponent {
     }
 
     this.setState({ markers });
-
-    // Attach event listeners after popups have been added to the DOM
-    setTimeout(() => {
-      data.features.forEach((feature, index) => {
-        this.attachIngredientChangeHandlers(index);
-      });
-    }, 0);
   };
 
-  attachIngredientChangeHandlers = (index) => {
-    const form = document.getElementById(`form-${index}`);
-    if (form) {
-      this.state.ingredientChecklist.forEach((item) => {
-        const checkbox = document.getElementById(`check-${item}-${index}`);
-        if (checkbox) {
-          checkbox.addEventListener('change', (event) => this.handleIngredientChange(event, index, item));
+  convertDecimalToDMS = (decimal) => {
+    const degrees = Math.floor(decimal);
+    const minutesDecimal = (decimal - degrees) * 60;
+    const minutes = Math.floor(minutesDecimal);
+    const seconds = (minutesDecimal - minutes) * 60;
+    return `${degrees}° ${minutes}' ${seconds.toFixed(3)}''`;
+  };
+
+  handleSubmit = (formState, index, coordinates) => {
+    const { ingredients, additionalNeeds, images } = formState;
+    const stuffNeededToHelp = {
+      ...ingredients,
+      additionalNeeds
+    };
+
+    const latitude = coordinates[1];
+    const longitude = coordinates[0];
+
+    const jsonData = {
+      current_location: {
+        Latitude: `${latitude} / N ${this.convertDecimalToDMS(latitude)}`,
+        Longitude: `${longitude} / E ${this.convertDecimalToDMS(longitude)}`
+      },
+      infoList: [
+        {
+          location: this.state.earthquakes[index].properties.place,
+          stuffNeededToHelp: stuffNeededToHelp,
+          images: images.map(image => ({ url: URL.createObjectURL(image) })),
         }
-      });
-    }
-  };
+      ]
+    };
 
-  handleIngredientChange = (event, index, item) => {
-    const label = document.getElementById(`label-${item}-${index}`);
-    if (label) {
-      label.style.textDecoration = event.target.checked ? 'line-through' : 'none';
-    }
-  };
-
-  handleSubmit = (event, index) => {
-    event.preventDefault();
-    const form = document.getElementById(`form-${index}`);
-    const ingredients = Array.from(form.querySelectorAll('input[name="ingredient"]:checked')).map(el => el.value);
-    const additionalNeeds = form.querySelector(`#additional-${index}`).value;
-    console.log(`Ingredients for marker ${index}:`, ingredients);
-    console.log(`Additional needs for marker ${index}:`, additionalNeeds);
-    // Add code to save this data to the database
+    console.log("JSON Data:", jsonData);
   };
 
   handleFilterChange = (e) => {

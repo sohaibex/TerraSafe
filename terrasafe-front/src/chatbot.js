@@ -88,7 +88,7 @@ const Chatbot = () => {
       });
 
       const result = await response.json();
-      console.log('Image Analysis:', result.description);
+      console.log('Image Analysis:', result);
       const aiMessage = { text: `Image Analysis: ${result.description}`, user: false };
       setMessages((prevMessages) => [...prevMessages, aiMessage]);
     } catch (error) {
