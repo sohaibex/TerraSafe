@@ -70,7 +70,7 @@ export class EarthquakeService {
     return earthquakes.docs.map((doc) => doc.data());
   }
 
-  async addHelpRequest(
+  async addOrUpdateHelpRequest(
     earthquakeId: string,
     helpRequest: any,
     currentLocation: { latitude: number; longitude: number },
@@ -84,7 +84,7 @@ export class EarthquakeService {
       .collection('Earthquakes')
       .doc(earthquakeId)
       .collection('HelpRequests')
-      .doc();
+      .doc('helpRequest');
 
     try {
       if (file) {
@@ -97,8 +97,11 @@ export class EarthquakeService {
 
         // Add the image URL and analysis description to the help request
         helpRequest.images = helpRequest.images || [];
-        helpRequest.images.push(imageUrlInBucket);
-        helpRequest.analysedImageDescription = analysedDescription;
+        helpRequest.images.push({
+          id: uuidv4(),
+          url: imageUrlInBucket,
+          analysedImageDescription: analysedDescription,
+        });
         console.log('Image analysis and upload complete.');
       }
 
@@ -109,11 +112,11 @@ export class EarthquakeService {
       );
 
       console.log('Setting help request in Firestore...');
-      await ref.set(helpRequest);
+      await ref.set(helpRequest, { merge: true });
       console.log('Help request set successfully in Firestore.');
       return ref.id;
     } catch (error) {
-      console.error('Error in addHelpRequest:', error);
+      console.error('Error in addOrUpdateHelpRequest:', error);
       throw new HttpException(
         'Failed to add help request',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -157,5 +160,81 @@ export class EarthquakeService {
     });
 
     return `https://storage.googleapis.com/${bucketName}/${fileName}`;
+  }
+
+  async fetchHelpRequest(earthquakeId: string) {
+    const helpRequestSnapshot = await this.db
+      .collection('Earthquakes')
+      .doc(earthquakeId)
+      .collection('HelpRequests')
+      .doc('helpRequest')
+      .get();
+
+    if (!helpRequestSnapshot.exists) {
+      throw new HttpException('Help request not found', HttpStatus.NOT_FOUND);
+    }
+
+    return helpRequestSnapshot.data();
+  }
+
+  async updateStuffNeeded(earthquakeId: string, stuffNeeded: any) {
+    const ref = this.db
+      .collection('Earthquakes')
+      .doc(earthquakeId)
+      .collection('HelpRequests')
+      .doc('helpRequest');
+
+    try {
+      await ref.update({ stuffNeeded });
+      return { message: 'stuffNeeded updated successfully' };
+    } catch (error) {
+      console.error('Error updating stuffNeeded:', error);
+      throw new HttpException(
+        'Failed to update stuffNeeded',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+  async updateHelpRequest(
+    earthquakeId: string,
+    updateData: any,
+    file?: Express.Multer.File,
+  ) {
+    const ref = this.db
+      .collection('Earthquakes')
+      .doc(earthquakeId)
+      .collection('HelpRequests')
+      .doc('helpRequest');
+
+    try {
+      if (file) {
+        console.log('File detected. Analyzing and uploading...');
+        // Analyze the image using the GCP function
+        const analysedDescription = await this.analyseImage(file);
+
+        // Upload the image to GCP bucket
+        const imageUrlInBucket = await this.uploadImageToBucket(file);
+
+        // Add the image URL and analysis description to the update data
+        updateData.images = updateData.images || [];
+        updateData.images.push({
+          id: uuidv4(),
+          url: imageUrlInBucket,
+          analysedImageDescription: analysedDescription,
+        });
+        console.log('Image analysis and upload complete.');
+      }
+
+      console.log('Updating help request in Firestore...');
+      await ref.set(updateData, { merge: true });
+      console.log('Help request updated successfully in Firestore.');
+      return ref.id;
+    } catch (error) {
+      console.error('Error in updateHelpRequest:', error);
+      throw new HttpException(
+        'Failed to update help request',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }
