@@ -10,23 +10,49 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { EarthquakeService } from './earthquake.service';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiBody,
+  ApiConsumes,
+} from '@nestjs/swagger';
 
 @Controller('earthquakes')
+@ApiTags('earthquakes')
 export class EarthquakeController {
   constructor(private readonly earthquakeService: EarthquakeService) {}
 
   @Get()
+  @ApiOperation({ summary: 'Get all earthquakes' })
   async getEarthquakes() {
     return this.earthquakeService.fetchEarthquakes();
   }
 
   @Get('fetch-and-store')
+  @ApiOperation({ summary: 'Fetch and store earthquake data' })
   async fetchAndStoreEarthquakes() {
     return this.earthquakeService.fetchAndStoreEarthquakes();
   }
 
   @Post(':id/help-request')
   @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Add or update help request for an earthquake' })
+  @ApiParam({ name: 'id', description: 'Earthquake ID' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        helpRequest: { type: 'string' },
+        currentLocation: { type: 'string' },
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
   async addOrUpdateHelpRequest(
     @Param('id') id: string,
     @Body('helpRequest') helpRequest: string,
@@ -46,11 +72,23 @@ export class EarthquakeController {
   }
 
   @Get(':id/help-request')
+  @ApiOperation({ summary: 'Get help request for an earthquake' })
+  @ApiParam({ name: 'id', description: 'Earthquake ID' })
   async getHelpRequest(@Param('id') id: string) {
     return this.earthquakeService.fetchHelpRequest(id);
   }
 
   @Put(':id/help-request/stuff-needed')
+  @ApiOperation({ summary: 'Update stuff needed in the help request' })
+  @ApiParam({ name: 'id', description: 'Earthquake ID' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        stuffNeeded: { type: 'string' },
+      },
+    },
+  })
   async updateStuffNeeded(
     @Param('id') id: string,
     @Body('stuffNeeded') stuffNeeded: any,
@@ -62,6 +100,21 @@ export class EarthquakeController {
 
   @Put(':id/help-request')
   @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Update help request for an earthquake' })
+  @ApiParam({ name: 'id', description: 'Earthquake ID' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        updateData: { type: 'string' },
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
   async updateHelpRequest(
     @Param('id') id: string,
     @Body('updateData') updateData: string,
