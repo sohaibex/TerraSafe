@@ -3,8 +3,9 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import markerIconPng from "leaflet/dist/images/marker-icon.png";
 import markerIconShadow from "leaflet/dist/images/marker-shadow.png";
-
-import Chatbot from '../chatbot';
+import Chatbot from "../chatbot";
+import PopupContent from "../components/PopupContent";
+import ReactDOM from "react-dom";
 
 export default class Home extends PureComponent {
   state = {
@@ -16,6 +17,13 @@ export default class Home extends PureComponent {
     showModal: false,
     selectedEarthquake: null,
     earthquakeData: {},
+    ingredientChecklist: [
+      "Des tentes",
+      "Cheeseburgers",
+      "Insuline pour les Diabètes",
+    ],
+    additionalNeeds: "",
+    markers: {},
   };
 
   componentDidMount() {
@@ -55,31 +63,102 @@ export default class Home extends PureComponent {
     });
 
     const markers = {};
-    let bounds = L.latLngBounds(); // Initialize bounds for the map
+    let bounds = L.latLngBounds();
 
     data.features.forEach((feature, index) => {
       const { coordinates } = feature.geometry;
-      const { mag, place } = feature.properties;
+
+      const popupContainer = document.createElement("div");
+      ReactDOM.render(
+        <PopupContent
+          feature={feature}
+          index={index}
+          ingredientChecklist={this.state.ingredientChecklist}
+          onSubmit={this.handleSubmit}
+        />,
+        popupContainer
+      );
 
       const marker = L.marker([coordinates[1], coordinates[0]], {
         icon: defaultIcon,
       })
         .addTo(map)
-        .bindPopup(
-          `<strong>Magnitude:</strong> ${mag}<br><strong>Location:</strong> ${place}`
-        );
+        .bindPopup(popupContainer);
 
       markers[index] = { marker, defaultIcon, hoverIcon };
 
-      bounds.extend(marker.getLatLng()); // Extend the bounds to include each marker's position
+      bounds.extend(marker.getLatLng());
     });
 
     if (data.features.length > 0) {
-      map.fitBounds(bounds); // Adjust the map view to the bounds of all markers
+      map.fitBounds(bounds);
     }
 
     this.setState({ markers });
   };
+
+  convertDecimalToDMS = (decimal) => {
+    const degrees = Math.floor(decimal);
+    const minutesDecimal = (decimal - degrees) * 60;
+    const minutes = Math.floor(minutesDecimal);
+    const seconds = (minutesDecimal - minutes) * 60;
+    return `${degrees}° ${minutes}' ${seconds.toFixed(3)}''`;
+  };
+
+  handleSubmit = (formState, index, coordinates) => {
+    const { ingredients, additionalNeeds, images } = formState;
+    const stuffNeededToHelp = {
+      ...ingredients,
+      [additionalNeeds]: false, // Adding additionalNeeds as a key with false value
+    };
+
+    navigator.geolocation.getCurrentPosition(position => {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+
+        const helpRequest = {
+            stuffNeeded: stuffNeededToHelp,
+            images: [], // images will be handled as files in the form data
+            analysedImageDescription: "", // Add appropriate description if needed
+        };
+
+        const currentLocation = {
+            latitude,
+            longitude
+        };
+
+        const formData = new FormData();
+        formData.append("helpRequest", JSON.stringify(helpRequest));
+        formData.append("current_location", JSON.stringify(currentLocation));
+        images.forEach((image, idx) => {
+            formData.append(`file${idx}`, image);
+        });
+
+        fetch(`/api/earthquakes/${index}/help-request`, {
+            method: "POST",
+            body: formData,
+        })
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error("Network response was not ok");
+            }
+            return response.json();
+        })
+        .then((data) => {
+            console.log("Success:", data);
+        })
+        .catch((error) => {
+            console.error("Error:", error);
+        });
+
+        console.log("Form Data:", formData);
+    }, error => {
+        console.error("Error getting current location:", error);
+        // Handle error getting location here
+    });
+};
+
+
   handleFilterChange = (e) => {
     this.setState({ filterText: e.target.value });
   };
@@ -110,14 +189,12 @@ export default class Home extends PureComponent {
           : a.properties.mag - b.properties.mag
       );
 
-    // Calculate the indexes for slicing the array
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
 
     return filtered.slice(indexOfFirstItem, indexOfLastItem);
   };
 
-  // Handle page change
   handlePageChange = (pageNumber) => {
     this.setState({ currentPage: pageNumber });
   };
@@ -157,7 +234,7 @@ export default class Home extends PureComponent {
           <button
             key={number}
             onClick={() => this.handlePageChange(number)}
-            className={`page-button ${currentPage === number ? "active" : ""}`} // Apply the page-button class
+            className={`page-button ${currentPage === number ? "active" : ""}`}
           >
             {number}
           </button>
@@ -174,8 +251,8 @@ export default class Home extends PureComponent {
       );
     }
   };
-  render() {
 
+  render() {
     const { showChatbot } = this.state;
 
     return (

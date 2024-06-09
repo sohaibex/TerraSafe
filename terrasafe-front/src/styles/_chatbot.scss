@@ -1,79 +1,88 @@
-/* Chatbot.css */
+/* Chatbot.scss */
 
-.chatbot-overlay{
-    position: fixed;
-    bottom: 70px;
-    right: 100px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
+.chatbot-overlay {
+  position: fixed;
+  bottom: 70px;
+  right: 100px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
 }
 
 .chatbot-toggle-btn {
-    position: absolute;
-    bottom: 30px;
-    right: 30px;
-    width: 70px;
-    height: 70px;
-    background-color: #055ebe;
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 999;
+  position: absolute;
+  bottom: 30px;
+  right: 30px;
+  width: 70px;
+  height: 70px;
+  background-color: #055ebe;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 999;
 
-    i{
-        font-size: 25px;
-    }
+  i {
+    font-size: 25px;
   }
+}
 
 .chatbot-container {
-    width: 400px;
-    margin: 0 auto;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    padding: 16px;
-    background-color: #f8f8f8;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  width: 400px;
+  margin: 0 auto;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 16px;
+  background-color: #f8f8f8;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
 
-    
-  }
-  .chatbot-messages {
-    height: 400px;
-    overflow-y: scroll;
-    padding: 8px;
-  }
-  .message {
-    margin: 8px 0;
-    padding: 8px;
-    border-radius: 4px;
-    font-size: 16px;
-    line-height: 1.5;
-  }
-  .user-message {
+.chatbot-messages {
+  height: 400px;
+  overflow-y: scroll;
+  padding: 8px;
+}
+
+.message {
+  margin: 8px 0;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 16px;
+  line-height: 1.5;
+
+  &.user-message {
     background-color: #055ebe;
     color: #fff;
     text-align: right;
+
+    img{
+      width: -webkit-fill-available;
+    }
   }
-  .ai-message {
+
+  &.ai-message {
     background-color: #f0f0f0;
     text-align: left;
+    width: -webkit-fill-available;
   }
-  .chatbot-input-form {
-    display: flex;
-    margin-top: 16px;
-  }
-  .chatbot-input-form input {
+}
+
+.chatbot-input-form {
+  display: flex;
+  margin-top: 16px;
+
+  input {
     flex: 1;
     padding: 8px;
     border: 1px solid #ccc;
     border-radius: 4px 0 0 4px;
     font-size: 16px;
   }
-  .chatbot-input-form button {
+
+  button {
     padding: 8px 16px;
     border: none;
     background-color: #055ebe;
@@ -81,7 +90,114 @@
     border-radius: 0 4px 4px 0;
     font-size: 20px;
     cursor: pointer;
+
+    &:hover {
+      background-color: #004aad;
+    }
   }
-  .chatbot-input-form button:hover {
+}
+
+.camera-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 16px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 16px;
+  background-color: #f8f8f8;
+
+  video {
+    width: 100%;
+    max-width: 360px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+  }
+
+  canvas {
+    display: none;
+  }
+
+  button {
+    padding: 8px 16px;
+    border: none;
     background-color: #055ebe;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    margin: 4px 0;
+
+    &:hover {
+      background-color: #004aad;
+    }
   }
+}
+.camera-upload-buttons {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+  gap: 4px;
+
+  button {
+    background-color: #055ebe;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      background-color: #004aad;
+    }
+
+    svg {
+      font-size: 24px;
+    }
+  }
+
+  input[type="file"] {
+    display: none;
+  }
+}
+
+.camera-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 16px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 16px;
+  background-color: #f8f8f8;
+
+  video {
+    width: 100%;
+    max-width: 360px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+  }
+
+  canvas {
+    display: none;
+  }
+
+  button {
+    padding: 8px 16px;
+    border: none;
+    background-color: #055ebe;
+    color: #fff;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    margin: 4px 0;
+
+    &:hover {
+      background-color: #004aad;
+    }
+  }
+}
