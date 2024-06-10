@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Put, Body, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  Param,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ChatbotService } from './chatbot.service';
 
@@ -25,14 +34,32 @@ export class ChatbotController {
     },
   })
   @ApiResponse({ status: 200, description: 'Question answered successfully.' })
-  async askQuestionWithContext(
+  @Post('ask-question')
+  async askQuestion(
+    @Body('sessionId') sessionId: string,
     @Body('question') question: string,
     @Body('currentLocation')
     currentLocation: { latitude: number; longitude: number },
   ) {
-    return this.chatbotService.askQuestionWithContext(
-      question,
-      currentLocation,
-    );
+    if (!sessionId || !question || !currentLocation) {
+      throw new HttpException(
+        'Missing required fields',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    try {
+      const response = await this.chatbotService.askQuestionWithContext(
+        sessionId,
+        question,
+        currentLocation,
+      );
+      return { answer: response };
+    } catch (error) {
+      throw new HttpException(
+        'Failed to process request',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }

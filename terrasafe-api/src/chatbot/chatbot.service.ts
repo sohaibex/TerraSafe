@@ -17,11 +17,23 @@ export class ChatbotService {
   ) {}
 
   async askQuestionWithContext(
+    userId: string,
     question: string,
     currentLocation: { latitude: number; longitude: number },
   ) {
+    // Fetch previous conversation history
+    const conversationHistory =
+      await this.earthquakeService.getConversationHistory(userId);
+
+    // Fetch the current context about earthquakes and help requests
     const context =
       await this.earthquakeService.fetchAllEarthquakesWithHelpRequests();
+
+    // Add the new user question to the conversation history
+    conversationHistory.push({
+      role: 'user',
+      content: `My current location is latitude ${currentLocation.latitude} and longitude ${currentLocation.longitude}. ${question}`,
+    });
 
     const payload = {
       model: 'gpt-4o',
@@ -33,8 +45,9 @@ export class ChatbotService {
         },
         {
           role: 'user',
-          content: `Here is the current data about earthquakes and help requests: ${JSON.stringify(context)}. Now, based on this data, please answer the following question: ${question} My current location is latitude ${currentLocation.latitude} and longitude ${currentLocation.longitude}.`,
+          content: `Here is the current data about earthquakes and help requests: ${JSON.stringify(context)}.`,
         },
+        ...conversationHistory,
       ],
       max_tokens: 300,
     };
@@ -50,7 +63,21 @@ export class ChatbotService {
           },
         },
       );
-      return response.data.choices[0].message.content;
+
+      // Add the assistant's response to the conversation history
+      const assistantResponse = response.data.choices[0].message.content;
+      conversationHistory.push({
+        role: 'assistant',
+        content: assistantResponse,
+      });
+
+      // Save the updated conversation history
+      await this.earthquakeService.saveConversationHistory(
+        userId,
+        conversationHistory,
+      );
+
+      return assistantResponse;
     } catch (error) {
       console.error('Error calling OpenAI API:', error);
       throw new HttpException(

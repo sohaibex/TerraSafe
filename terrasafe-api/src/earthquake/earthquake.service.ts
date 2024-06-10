@@ -258,4 +258,19 @@ export class EarthquakeService {
 
     return earthquakes;
   }
+
+  async saveConversationHistory(userId: string, history: any[]) {
+    const ref = this.db.collection('Conversations').doc(userId);
+    await ref.set({ history }, { merge: true });
+  }
+
+  async getConversationHistory(userId: string): Promise<any[]> {
+    const ref = this.db.collection('Conversations').doc(userId);
+    const doc = await ref.get();
+    if (doc.exists) {
+      return doc.data().history;
+    } else {
+      return [];
+    }
+  }
 }
