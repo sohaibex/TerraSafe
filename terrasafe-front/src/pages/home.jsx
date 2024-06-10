@@ -1,11 +1,11 @@
 import React, { PureComponent } from "react";
+import { createRoot } from "react-dom/client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import markerIconPng from "leaflet/dist/images/marker-icon.png";
 import markerIconShadow from "leaflet/dist/images/marker-shadow.png";
 import Chatbot from "../chatbot";
 import PopupContent from "../components/PopupContent";
-import ReactDOM from "react-dom";
 
 export default class Home extends PureComponent {
   state = {
@@ -17,13 +17,10 @@ export default class Home extends PureComponent {
     showModal: false,
     selectedEarthquake: null,
     earthquakeData: {},
-    ingredientChecklist: [
-      "Des tentes",
-      "Cheeseburgers",
-      "Insuline pour les Diabètes",
-    ],
+    ingredientChecklist: [],
     additionalNeeds: "",
     markers: {},
+    helpRequests: {}, // Add a state property to store help-request data
   };
 
   componentDidMount() {
@@ -35,17 +32,30 @@ export default class Home extends PureComponent {
   }
 
   fetchEarthquakeData = (map) => {
-    fetch(
-      "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson"
-    )
+    fetch("http://localhost:3000/earthquakes")
       .then((response) => response.json())
       .then((data) => {
-        this.setState({ earthquakes: data.features });
+        this.setState({ earthquakes: data });
         this.addEarthquakeMarkers(data, map);
       })
       .catch((error) =>
         console.error("Error fetching earthquake data:", error)
       );
+  };
+
+  fetchHelpRequestData = (id) => {
+    return fetch(`http://localhost:3000/earthquakes/${id}/help-request`)
+      .then((response) => response.json())
+      .then((data) => {
+        this.setState((prevState) => ({
+          helpRequests: { ...prevState.helpRequests, [id]: data },
+        }));
+        return data;
+      })
+      .catch((error) => {
+        console.error("Error fetching help-request data:", error);
+        return null;
+      });
   };
 
   addEarthquakeMarkers = (data, map) => {
@@ -65,32 +75,36 @@ export default class Home extends PureComponent {
     const markers = {};
     let bounds = L.latLngBounds();
 
-    data.features.forEach((feature, index) => {
-      const { coordinates } = feature.geometry;
+    data.forEach((feature) => {
+      const { _latitude, _longitude } = feature.coordinates;
+      const id = feature.code;
 
-      const popupContainer = document.createElement("div");
-      ReactDOM.render(
-        <PopupContent
-          feature={feature}
-          index={index}
-          ingredientChecklist={this.state.ingredientChecklist}
-          onSubmit={this.handleSubmit}
-        />,
-        popupContainer
-      );
-
-      const marker = L.marker([coordinates[1], coordinates[0]], {
+      const marker = L.marker([_latitude, _longitude], {
         icon: defaultIcon,
-      })
-        .addTo(map)
-        .bindPopup(popupContainer);
+      }).addTo(map);
 
-      markers[index] = { marker, defaultIcon, hoverIcon };
+      marker.on("mouseover", () => {
+        this.fetchHelpRequestData(id).then((helpRequestData) => {
+          const popupContainer = document.createElement("div");
+          const root = createRoot(popupContainer);
+          root.render(
+            <PopupContent
+              feature={feature}
+              id={id}
+              ingredientChecklist={this.state.ingredientChecklist}
+              onSubmit={this.handleSubmit}
+              helpRequestData={helpRequestData}
+            />
+          );
+          marker.bindPopup(popupContainer).openPopup();
+        });
+      });
 
+      markers[id] = { marker, defaultIcon, hoverIcon };
       bounds.extend(marker.getLatLng());
     });
 
-    if (data.features.length > 0) {
+    if (data.length > 0) {
       map.fitBounds(bounds);
     }
 
@@ -105,59 +119,58 @@ export default class Home extends PureComponent {
     return `${degrees}° ${minutes}' ${seconds.toFixed(3)}''`;
   };
 
-  handleSubmit = (formState, index, coordinates) => {
+  handleSubmit = (formState, id) => {
     const { ingredients, additionalNeeds, images } = formState;
     const stuffNeededToHelp = {
       ...ingredients,
       [additionalNeeds]: false, // Adding additionalNeeds as a key with false value
     };
 
-    navigator.geolocation.getCurrentPosition(position => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
         const latitude = position.coords.latitude;
         const longitude = position.coords.longitude;
 
         const helpRequest = {
-            stuffNeeded: stuffNeededToHelp,
-            images: [], // images will be handled as files in the form data
-            analysedImageDescription: "", // Add appropriate description if needed
+          stuffNeeded: stuffNeededToHelp,
+          // images: [], // images will be handled as files in the form data
+          // analysedImageDescription: "", // Add appropriate description if needed
         };
 
         const currentLocation = {
-            latitude,
-            longitude
+          latitude,
+          longitude,
         };
 
         const formData = new FormData();
         formData.append("helpRequest", JSON.stringify(helpRequest));
-        formData.append("current_location", JSON.stringify(currentLocation));
+        formData.append("currentLocation", JSON.stringify(currentLocation));
         images.forEach((image, idx) => {
-            formData.append(`file${idx}`, image);
+          formData.append(`file`, image);
         });
 
-        fetch(`/api/earthquakes/${index}/help-request`, {
-            method: "POST",
-            body: formData,
+        fetch(`http://localhost:3000/earthquakes/${id}/help-request`, {
+          method: "POST",
+          body: formData,
         })
-        .then((response) => {
+          .then((response) => {
             if (!response.ok) {
-                throw new Error("Network response was not ok");
+              throw new Error("Network response was not ok");
             }
             return response.json();
-        })
-        .then((data) => {
+          })
+          .then((data) => {
             console.log("Success:", data);
-        })
-        .catch((error) => {
+          })
+          .catch((error) => {
             console.error("Error:", error);
-        });
-
-        console.log("Form Data:", formData);
-    }, error => {
+          });
+      },
+      (error) => {
         console.error("Error getting current location:", error);
-        // Handle error getting location here
-    });
-};
-
+      }
+    );
+  };
 
   handleFilterChange = (e) => {
     this.setState({ filterText: e.target.value });
@@ -179,14 +192,10 @@ export default class Home extends PureComponent {
     } = this.state;
     const filtered = earthquakes
       .filter((earthquake) =>
-        earthquake.properties.place
-          .toLowerCase()
-          .includes(filterText.toLowerCase())
+        earthquake.location.toLowerCase().includes(filterText.toLowerCase())
       )
       .sort((a, b) =>
-        sortByMagnitude
-          ? b.properties.mag - a.properties.mag
-          : a.properties.mag - b.properties.mag
+        sortByMagnitude ? b.magnitude - a.magnitude : a.magnitude - b.magnitude
       );
 
     const indexOfLastItem = currentPage * itemsPerPage;
@@ -203,18 +212,18 @@ export default class Home extends PureComponent {
     const filteredEarthquakes = this.filterAndSortEarthquakes();
 
     return filteredEarthquakes.map((earthquake, index) => {
-      const { mag, place, time } = earthquake.properties;
-      const date = new Date(time).toLocaleString();
+      const { magnitude, location, timestamp, code } = earthquake;
+      const date = new Date(timestamp._seconds * 1000).toLocaleString();
 
       return (
         <div
-          key={index}
+          key={code} // Use code as the key
           className="earthquake-detail"
-          onMouseEnter={() => this.handleMarkerHover(index, true)}
-          onMouseLeave={() => this.handleMarkerHover(index, false)}
+          onMouseEnter={() => this.handleMarkerHover(code, true)} // Use code for hover
+          onMouseLeave={() => this.handleMarkerHover(code, false)} // Use code for hover
         >
-          <div className="magnitude">Magnitude: {mag}</div>
-          <div className="location">{place}</div>
+          <div className="magnitude">Magnitude: {magnitude}</div>
+          <div className="location">{location}</div>
           <div className="time">{date}</div>
         </div>
       );
@@ -243,11 +252,11 @@ export default class Home extends PureComponent {
     );
   };
 
-  handleMarkerHover = (index, isHovered) => {
+  handleMarkerHover = (id, isHovered) => {
     const { markers } = this.state;
-    if (markers[index]) {
-      markers[index].marker.setIcon(
-        isHovered ? markers[index].hoverIcon : markers[index].defaultIcon
+    if (markers[id]) {
+      markers[id].marker.setIcon(
+        isHovered ? markers[id].hoverIcon : markers[id].defaultIcon
       );
     }
   };
@@ -271,10 +280,7 @@ export default class Home extends PureComponent {
               onChange={this.handleFilterChange}
               style={{ marginBottom: "20px", width: "100%" }}
             />
-            <button
-              onClick={this.toggleSortByMagnitude}
-              className="sort-button"
-            >
+            <button onClick={this.toggleSortByMagnitude} className="sort-button">
               {this.state.sortByMagnitude
                 ? "Sort by Smallest Magnitude"
                 : "Sort by Largest Magnitude"}

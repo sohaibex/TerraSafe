@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import Slider from "react-slick";
+import FullScreenImageModal from "./FullScreenImageModal"; // Import the modal component
 
-const PopupContent = ({ feature, index, ingredientChecklist, onSubmit }) => {
+const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpRequestData }) => {
   const [formState, setFormState] = useState({
     ingredients: ingredientChecklist.reduce((acc, item) => {
       acc[item] = false;
@@ -9,6 +11,17 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit }) => {
     additionalNeeds: "",
     images: [],
   });
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false); // State to manage modal visibility
+
+  useEffect(() => {
+    if (helpRequestData) {
+      setFormState((prevState) => ({
+        ...prevState,
+        ...helpRequestData,
+      }));
+    }
+  }, [helpRequestData]);
 
   const convertDecimalToDMS = (decimal) => {
     const degrees = Math.floor(decimal);
@@ -46,15 +59,39 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formState, index, feature.geometry.coordinates);
+    onSubmit(formState, index, feature.coordinates);
   };
 
-  const { coordinates } = feature.geometry;
-  const place = feature.properties.place;
-  const latitude = coordinates[1];
-  const longitude = coordinates[0];
+  const place = feature.location;
+  const latitude = feature.coordinates._latitude;
+  const longitude = feature.coordinates._longitude;
   const latitudeDMS = convertDecimalToDMS(latitude);
   const longitudeDMS = convertDecimalToDMS(longitude);
+
+  // Use a default object if helpRequestData is null or undefined
+  const defaultHelpRequestData = {
+    stuffNeeded: {},
+    images: [],
+  };
+
+  const effectiveHelpRequestData = helpRequestData || defaultHelpRequestData;
+
+  const handleImageClick = (image) => {
+    setSelectedImage(image);
+    setIsModalOpen(true); // Open modal
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false); // Close modal
+  };
+
+  const sliderSettings = {
+    dots: true,
+    infinite: true,
+    speed: 500,
+    slidesToShow: 1,
+    slidesToScroll: 1,
+  };
 
   return (
     <form onSubmit={handleSubmit}>
@@ -72,45 +109,88 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit }) => {
         Longitude: {longitude} / E {longitudeDMS}
         <br />
       </div>
-      <div className="ingredients-list">
-        <strong>Ingrédients nécessaires :</strong>
-        <br />
-        {ingredientChecklist.map((item) => (
-          <div className="ingredient-item" key={item}>
-            <input
-              type="checkbox"
-              id={`check-${item}-${index}`}
-              name={item}
-              checked={formState.ingredients[item]}
-              onChange={handleChange}
-            />
-            <label htmlFor={`check-${item}-${index}`}>{item}</label>
+      <div className="help-request-data">
+        {effectiveHelpRequestData.stuffNeeded && (
+          <div className="ingredients-list">
+            <strong>Ingrédients nécessaires :</strong>
             <br />
+            {Object.entries(effectiveHelpRequestData.stuffNeeded).map(([key, value]) => (
+              <div className="ingredient-item" key={key}>
+                <input
+                  type="checkbox"
+                  id={`check-${key}-${index}`}
+                  name={key}
+                  checked={value}
+                  onChange={handleChange}
+                />
+                <label htmlFor={`check-${key}-${index}`}>{key}</label>
+                <br />
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      <div className="additional-needs">
-        <strong>Les besoins:</strong>
-        <br />
-        <input
-          type="text"
-          name="additionalNeeds"
-          value={formState.additionalNeeds}
-          onChange={handleChange}
-        />
-        <br />
-        <br />
-      </div>
-      <div className="picture-options">
-        <strong>Envoyer des photos Options:</strong>
-        <br />
-        <input
-          type="file"
-          accept="image/*"
-          multiple
-          onChange={handleImageUpload}
-        />
-        <br />
+        )}
+        <div className="additional-needs">
+          <strong>Les besoins:</strong>
+          <br />
+          <input
+            type="text"
+            name="additionalNeeds"
+            value={formState.additionalNeeds}
+            onChange={handleChange}
+          />
+          <br />
+          <br />
+        </div>
+        <div className="authorities_contacts">
+          <strong>Contacter les services:</strong>
+          <br />
+          <input
+            type="text"
+            name="authoritiesContacts"
+            // value={formState.authorities_contacts}
+            // onChange={handleChange}
+          />
+          <br />
+          <br />
+        </div>
+        <div className="picture-options">
+          <strong>Envoyer des photos Options:</strong>
+          <br />
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleImageUpload}
+          />
+          <br />
+          <br />
+        </div>
+        <div className="images">
+          {effectiveHelpRequestData.images && (
+            effectiveHelpRequestData.images.length > 1 ? (
+              <Slider {...sliderSettings}>
+                {effectiveHelpRequestData.images.map((image) => (
+                  <div key={image.id} className="image-item" onClick={() => handleImageClick(image)}>
+                    <img src={image.url} alt="place-damage" />
+                  </div>
+                ))}
+              </Slider>
+            ) : (
+              effectiveHelpRequestData.images.map((image) => (
+                <div key={image.id} className="image-item" onClick={() => handleImageClick(image)}>
+                  <img src={image.url} alt="place-damage" />
+                </div>
+              ))
+            )
+          )}
+        </div>
+        {isModalOpen && selectedImage && (
+          <FullScreenImageModal
+            image={selectedImage}
+            description={selectedImage.analysedImageDescription}
+            onClose={handleCloseModal}
+          />
+        )}
       </div>
       <button type="submit">Submit</button>
     </form>
