@@ -7,12 +7,13 @@ import * as FormData from 'form-data';
 import { v4 as uuidv4 } from 'uuid';
 import { Storage } from '@google-cloud/storage';
 import { EarthquakeService } from '../earthquake/earthquake.service';
-
+import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class ChatbotService {
   constructor(
     private readonly earthquakeService: EarthquakeService,
     private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
   ) {}
 
   async askQuestionWithContext(
@@ -32,7 +33,7 @@ export class ChatbotService {
         },
         {
           role: 'user',
-          content: `Here is the current data about earthquakes and help requests: ${JSON.stringify(context)}. Now, based on this data, please answer the following question: ${question}`,
+          content: `Here is the current data about earthquakes and help requests: ${JSON.stringify(context)}. Now, based on this data, please answer the following question: ${question} My current location is latitude ${currentLocation.latitude} and longitude ${currentLocation.longitude}.`,
         },
       ],
       max_tokens: 300,
@@ -44,7 +45,7 @@ export class ChatbotService {
         payload,
         {
           headers: {
-            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+            Authorization: `Bearer ${this.configService.get('OPENAI_API_KEY')}`,
             'Content-Type': 'application/json',
           },
         },
