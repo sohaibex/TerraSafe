@@ -1,10 +1,7 @@
 import {
   Controller,
-  Get,
   Post,
-  Put,
   Body,
-  Param,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
@@ -22,6 +19,7 @@ export class ChatbotController {
     schema: {
       type: 'object',
       properties: {
+        userId: { type: 'string' },
         question: { type: 'string' },
         currentLocation: {
           type: 'object',
@@ -34,14 +32,13 @@ export class ChatbotController {
     },
   })
   @ApiResponse({ status: 200, description: 'Question answered successfully.' })
-  @Post('ask-question')
   async askQuestion(
-    @Body('sessionId') sessionId: string,
+    @Body('userId') userId: string,
     @Body('question') question: string,
     @Body('currentLocation')
     currentLocation: { latitude: number; longitude: number },
   ) {
-    if (!sessionId || !question || !currentLocation) {
+    if (!userId || !question || !currentLocation) {
       throw new HttpException(
         'Missing required fields',
         HttpStatus.BAD_REQUEST,
@@ -50,12 +47,13 @@ export class ChatbotController {
 
     try {
       const response = await this.chatbotService.askQuestionWithContext(
-        sessionId,
+        userId,
         question,
         currentLocation,
       );
       return { answer: response };
     } catch (error) {
+      console.error('Error processing request:', error);
       throw new HttpException(
         'Failed to process request',
         HttpStatus.INTERNAL_SERVER_ERROR,

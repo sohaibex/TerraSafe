@@ -9,37 +9,25 @@ import { Storage } from '@google-cloud/storage';
 import { EarthquakeService } from '../earthquake/earthquake.service';
 import { ConfigService } from '@nestjs/config';
 import { ElasticsearchService } from '@nestjs/elasticsearch';
-
 @Injectable()
 export class ChatbotService {
   constructor(
     private readonly earthquakeService: EarthquakeService,
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
-    private readonly elasticsearchService: ElasticsearchService,
   ) {}
-
-  async logData(log: any) {
-    await this.elasticsearchService.index({
-      index: 'logs',
-      body: log,
-    });
-  }
 
   async askQuestionWithContext(
     userId: string,
     question: string,
     currentLocation: { latitude: number; longitude: number },
   ) {
-    // Fetch previous conversation history
     const conversationHistory =
       await this.earthquakeService.getConversationHistory(userId);
 
-    // Fetch the current context about earthquakes and help requests
     const context =
       await this.earthquakeService.fetchAllEarthquakesWithHelpRequests();
 
-    // Add the new user question to the conversation history
     conversationHistory.push({
       role: 'user',
       content: `My current location is latitude ${currentLocation.latitude} and longitude ${currentLocation.longitude}. ${question}`,
@@ -74,39 +62,20 @@ export class ChatbotService {
         },
       );
 
-      // Add the assistant's response to the conversation history
       const assistantResponse = response.data.choices[0].message.content;
       conversationHistory.push({
         role: 'assistant',
         content: assistantResponse,
       });
 
-      // Save the updated conversation history
       await this.earthquakeService.saveConversationHistory(
         userId,
         conversationHistory,
       );
 
-      // Log the conversation to Elasticsearch
-      await this.logData({
-        message: 'Conversation logged',
-        userId,
-        question,
-        assistantResponse,
-        conversationHistory,
-      });
-
       return assistantResponse;
     } catch (error) {
       console.error('Error calling OpenAI API:', error);
-
-      // Log the error to Elasticsearch
-      await this.logData({
-        message: 'Failed to get response from OpenAI API',
-        userId,
-        question,
-        error: error.message,
-      });
 
       throw new HttpException(
         'Failed to get response from OpenAI API',
