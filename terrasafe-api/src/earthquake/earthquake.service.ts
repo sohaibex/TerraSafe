@@ -237,4 +237,25 @@ export class EarthquakeService {
       );
     }
   }
+  async fetchAllEarthquakesWithHelpRequests() {
+    const earthquakesSnapshot = await this.db.collection('Earthquakes').get();
+    const earthquakes = [];
+
+    for (const earthquakeDoc of earthquakesSnapshot.docs) {
+      const earthquakeData = earthquakeDoc.data();
+      const helpRequestsSnapshot = await this.db
+        .collection('Earthquakes')
+        .doc(earthquakeDoc.id)
+        .collection('HelpRequests')
+        .get();
+
+      const helpRequests = helpRequestsSnapshot.docs.map((doc) => doc.data());
+      earthquakes.push({
+        ...earthquakeData,
+        helpRequests,
+      });
+    }
+
+    return earthquakes;
+  }
 }
