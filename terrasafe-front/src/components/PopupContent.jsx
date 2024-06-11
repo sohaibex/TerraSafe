@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Slider from "react-slick";
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
 import FullScreenImageModal from "./FullScreenImageModal"; // Import the modal component
 
 const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpRequestData, authoritiesContacts }) => {
@@ -88,10 +90,10 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
 
   const sliderSettings = {
     dots: true,
-    infinite: true,
+    infinite: false,
     speed: 500,
-    slidesToShow: 1,
-    slidesToScroll: 1,
+    slidesToShow: 3,
+    slidesToScroll: 3,
   };
 
   return (
@@ -177,11 +179,7 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
                 ))}
               </Slider>
             ) : (
-              effectiveHelpRequestData.images.map((image) => (
-                <div key={image.id} className="image-item" onClick={() => handleImageClick(image)}>
-                  <img src={image.url} alt="place-damage" />
-                </div>
-              ))
+              "No images available."
             )
           )}
         </div>
