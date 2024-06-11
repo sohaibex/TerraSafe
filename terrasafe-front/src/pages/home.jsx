@@ -90,10 +90,11 @@ export default class Home extends PureComponent {
           root.render(
             <PopupContent
               feature={feature}
-              id={id}
+              index={id}
               ingredientChecklist={this.state.ingredientChecklist}
               onSubmit={this.handleSubmit}
               helpRequestData={helpRequestData}
+              authoritiesContacts={helpRequestData ? helpRequestData.authoritiesContacts : ""}
             />
           );
           marker.bindPopup(popupContainer).openPopup();
@@ -120,7 +121,7 @@ export default class Home extends PureComponent {
   };
 
   handleSubmit = (formState, id) => {
-    const { ingredients, additionalNeeds, images } = formState;
+    const { ingredients, additionalNeeds, authoritiesContacts, images } = formState;
     const stuffNeededToHelp = {
       ...ingredients,
       [additionalNeeds]: false, // Adding additionalNeeds as a key with false value
@@ -144,6 +145,7 @@ export default class Home extends PureComponent {
 
         const formData = new FormData();
         formData.append("helpRequest", JSON.stringify(helpRequest));
+        formData.append("authoritiesContacts", JSON.stringify(authoritiesContacts));
         formData.append("currentLocation", JSON.stringify(currentLocation));
         images.forEach((image, idx) => {
           formData.append(`file`, image);

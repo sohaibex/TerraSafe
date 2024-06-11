@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Slider from "react-slick";
 import FullScreenImageModal from "./FullScreenImageModal"; // Import the modal component
 
-const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpRequestData }) => {
+const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpRequestData, authoritiesContacts }) => {
   const [formState, setFormState] = useState({
     ingredients: ingredientChecklist.reduce((acc, item) => {
       acc[item] = false;
@@ -10,6 +10,7 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
     }, {}),
     additionalNeeds: "",
     images: [],
+    authoritiesContacts: "",
   });
   const [selectedImage, setSelectedImage] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false); // State to manage modal visibility
@@ -141,18 +142,18 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
           <br />
           <br />
         </div>
-        <div className="authorities_contacts">
-          <strong>Contacter les services:</strong>
-          <br />
-          <input
-            type="text"
-            name="authoritiesContacts"
-            // value={formState.authorities_contacts}
-            // onChange={handleChange}
-          />
-          <br />
-          <br />
-        </div>
+        
+          <div className="authoritiesContacts">
+            <strong>Contact des services:</strong>
+            <br />
+            {authoritiesContacts && (
+              {authoritiesContacts}
+            )}
+            <input type="text" name="authoritiesContacts" value={formState.authoritiesContacts} onChange={handleChange} />
+            <br />
+            <br />
+          </div>
+        
         <div className="picture-options">
           <strong>Envoyer des photos Options:</strong>
           <br />
