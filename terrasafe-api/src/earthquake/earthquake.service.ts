@@ -186,7 +186,6 @@ export class EarthquakeService {
       );
     }
   }
-
   async updateHelpRequest(
     earthquakeId: string,
     updateData: any,
@@ -199,18 +198,36 @@ export class EarthquakeService {
       .doc('helpRequest');
 
     try {
+      // Fetch the existing document
+      const helpRequestSnapshot = await ref.get();
+      const existingData = helpRequestSnapshot.exists
+        ? helpRequestSnapshot.data()
+        : {};
+
       if (file) {
         const analysedDescription = await this.analyseImage(file);
         const imageUrlInBucket = await this.uploadImageToBucket(file);
-        updateData.images = updateData.images || [];
-        updateData.images.push({
-          id: uuidv4(),
-          url: imageUrlInBucket,
-          analysedImageDescription: analysedDescription,
-        });
+
+        // Merge existing images with new image
+        const existingImages = existingData.images || [];
+        updateData.images = [
+          ...existingImages,
+          {
+            id: uuidv4(),
+            url: imageUrlInBucket,
+            analysedImageDescription: analysedDescription,
+          },
+        ];
       }
 
-      await ref.set(updateData, { merge: true });
+      // Ensure that other fields are merged properly
+      const mergedData = {
+        ...existingData,
+        ...updateData,
+        images: updateData.images || existingData.images || [],
+      };
+
+      await ref.set(mergedData, { merge: true });
 
       return ref.id;
     } catch (error) {
