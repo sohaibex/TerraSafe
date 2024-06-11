@@ -4,7 +4,7 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import FullScreenImageModal from "./FullScreenImageModal"; // Import the modal component
 
-const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpRequestData, authoritiesContacts }) => {
+const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpRequestData, onClosePopup }) => {
   const [formState, setFormState] = useState({
     ingredients: ingredientChecklist.reduce((acc, item) => {
       acc[item] = false;
@@ -15,7 +15,8 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
     authoritiesContacts: "",
   });
   const [selectedImage, setSelectedImage] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false); // State to manage modal visibility
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (helpRequestData) {
@@ -60,10 +61,21 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSubmit(formState, index, feature.coordinates);
+    setIsSubmitting(true);
+  
+    try {
+      await onSubmit(formState, index, feature.coordinates);
+      setIsSubmitting(false);
+      onClosePopup(); // Call the onClosePopup function
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      setIsSubmitting(false);
+      onClosePopup();
+    }
   };
+  
 
   const place = feature.location;
   const latitude = feature.coordinates._latitude;
@@ -85,7 +97,7 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
   };
 
   const handleCloseModal = () => {
-    setIsModalOpen(false); // Close modal
+    console.log("Closing modal...");
   };
 
   const sliderSettings = {
@@ -93,7 +105,7 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
     infinite: false,
     speed: 500,
     slidesToShow: 3,
-    slidesToScroll: 3,
+    slidesToScroll: 2,
   };
 
   return (
@@ -145,17 +157,6 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
           <br />
         </div>
         
-          <div className="authoritiesContacts">
-            <strong>Contact des services:</strong>
-            <br />
-            {authoritiesContacts && (
-              {authoritiesContacts}
-            )}
-            <input type="text" name="authoritiesContacts" value={formState.authoritiesContacts} onChange={handleChange} />
-            <br />
-            <br />
-          </div>
-        
         <div className="picture-options">
           <strong>Envoyer des photos Options:</strong>
           <br />
@@ -169,7 +170,7 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
           <br />
         </div>
         <div className="images">
-          {effectiveHelpRequestData.images && (
+          {effectiveHelpRequestData.images && effectiveHelpRequestData.images.length > 0 ? (
             effectiveHelpRequestData.images.length > 1 ? (
               <Slider {...sliderSettings}>
                 {effectiveHelpRequestData.images.map((image) => (
@@ -179,8 +180,12 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
                 ))}
               </Slider>
             ) : (
-              "No images available."
+              <div key={effectiveHelpRequestData.images[0].id} className="image-item" onClick={() => handleImageClick(effectiveHelpRequestData.images[0])}>
+                <img src={effectiveHelpRequestData.images[0].url} alt="place-damage" />
+              </div>
             )
+          ) : (
+            "No images available."
           )}
         </div>
         {isModalOpen && selectedImage && (
@@ -191,7 +196,9 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
           />
         )}
       </div>
-      <button type="submit">Submit</button>
+      <button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? "En cours..." : "Envoyer"}
+      </button>
     </form>
   );
 };

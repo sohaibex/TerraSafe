@@ -27,7 +27,7 @@ const Chatbot = () => {
   }, []);
 
   const chatWithBackend = async (userInput) => {
-    const apiEndpoint = 'http://localhost:3000/chatbot/ask-question';
+    const apiEndpoint = 'https://nestjs-app-gvqz5uatza-od.a.run.app/chatbot/ask-question';
     const userInfo = localStorage.getItem('user');
     const data = {
       userId: userInfo ? JSON.parse(userInfo).uid : null,

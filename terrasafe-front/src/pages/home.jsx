@@ -20,7 +20,17 @@ export default class Home extends PureComponent {
     ingredientChecklist: [],
     additionalNeeds: "",
     markers: {},
+    hasHelpRequestData: {},
     helpRequests: {}, // Add a state property to store help-request data
+  };
+
+  // Inside the Home component
+  closePopup = () => {
+    const { markers } = this.state;
+    // Loop through all markers and close their popups
+    Object.values(markers).forEach(({ marker }) => {
+      marker.closePopup();
+    });
   };
 
   componentDidMount() {
@@ -32,7 +42,7 @@ export default class Home extends PureComponent {
   }
 
   fetchEarthquakeData = (map) => {
-    fetch("http://localhost:3000/earthquakes")
+    fetch("https://nestjs-app-gvqz5uatza-od.a.run.app/earthquakes")
       .then((response) => response.json())
       .then((data) => {
         this.setState({ earthquakes: data });
@@ -44,19 +54,29 @@ export default class Home extends PureComponent {
   };
 
   fetchHelpRequestData = (id) => {
-    return fetch(`http://localhost:3000/earthquakes/${id}/help-request`)
-      .then((response) => response.json())
+    return fetch(`https://nestjs-app-gvqz5uatza-od.a.run.app/earthquakes/${id}/help-request`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        return response.json();
+      })
       .then((data) => {
         this.setState((prevState) => ({
           helpRequests: { ...prevState.helpRequests, [id]: data },
+          hasHelpRequestData: { ...prevState.hasHelpRequestData, [id]: true }, // Update state
         }));
         return data;
       })
       .catch((error) => {
         console.error("Error fetching help-request data:", error);
+        this.setState((prevState) => ({
+          hasHelpRequestData: { ...prevState.hasHelpRequestData, [id]: false }, // Update state
+        }));
         return null;
       });
   };
+  
 
   addEarthquakeMarkers = (data, map) => {
     const defaultIcon = L.icon({
@@ -93,6 +113,7 @@ export default class Home extends PureComponent {
               index={id}
               ingredientChecklist={this.state.ingredientChecklist}
               onSubmit={this.handleSubmit}
+              onClosePopup={this.closePopup} // Pass closePopup as a prop
               helpRequestData={helpRequestData}
               authoritiesContacts={helpRequestData ? helpRequestData.authoritiesContacts : ""}
             />
@@ -121,58 +142,73 @@ export default class Home extends PureComponent {
   };
 
   handleSubmit = (formState, id) => {
-    const { ingredients, additionalNeeds, authoritiesContacts, images } = formState;
-    const stuffNeededToHelp = {
-      ...ingredients,
-      [additionalNeeds]: false, // Adding additionalNeeds as a key with false value
-    };
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const latitude = position.coords.latitude;
-        const longitude = position.coords.longitude;
-
-        const helpRequest = {
-          stuffNeeded: stuffNeededToHelp,
-          // images: [], // images will be handled as files in the form data
-          // analysedImageDescription: "", // Add appropriate description if needed
-        };
-
-        const currentLocation = {
-          latitude,
-          longitude,
-        };
-
-        const formData = new FormData();
-        formData.append("helpRequest", JSON.stringify(helpRequest));
-        formData.append("authoritiesContacts", JSON.stringify(authoritiesContacts));
-        formData.append("currentLocation", JSON.stringify(currentLocation));
-        images.forEach((image, idx) => {
-          formData.append(`file`, image);
-        });
-
-        fetch(`http://localhost:3000/earthquakes/${id}/help-request`, {
-          method: "POST",
-          body: formData,
-        })
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error("Network response was not ok");
-            }
-            return response.json();
+    return new Promise((resolve, reject) => {
+      const { ingredients, additionalNeeds, authoritiesContacts, images } = formState;
+      const stuffNeededToHelp = {
+        ...ingredients,
+        [additionalNeeds]: false,
+      };
+  
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const latitude = position.coords.latitude;
+          const longitude = position.coords.longitude;
+  
+          const helpRequest = {
+            stuffNeeded: stuffNeededToHelp,
+          };
+  
+          const currentLocation = {
+            latitude,
+            longitude,
+          };
+  
+          const formData = new FormData();
+          const method = this.state.hasHelpRequestData[id] ? "PUT" : "POST"; // Determine method based on state
+  
+          if (method === "POST") {
+            formData.append("helpRequest", JSON.stringify(helpRequest));
+            formData.append("authoritiesContacts", JSON.stringify(authoritiesContacts));
+            formData.append("currentLocation", JSON.stringify(currentLocation));
+            images.forEach((image) => {
+              formData.append("file", image); // Append file for POST request
+            });
+          } else if (method === "PUT") {
+            formData.append("updateData", JSON.stringify(helpRequest));
+            images.forEach((image) => {
+              formData.append("file", image); // Append file for PUT request
+            });
+          }
+  
+          fetch(`https://nestjs-app-gvqz5uatza-od.a.run.app/earthquakes/${id}/help-request`, {
+            method,
+            body: formData,
           })
-          .then((data) => {
-            console.log("Success:", data);
-          })
-          .catch((error) => {
-            console.error("Error:", error);
-          });
-      },
-      (error) => {
-        console.error("Error getting current location:", error);
-      }
-    );
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error("Network response was not ok");
+              }
+              return response.json();
+            })
+            .then((data) => {
+              console.log("Success:", data);
+              resolve(); // Resolve the promise on success
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              reject(error); // Reject the promise on error
+            });
+        },
+        (error) => {
+          console.error("Error getting current location:", error);
+          reject(error); // Reject the promise on error
+        }
+      );
+    });
   };
+  
+  
+  
 
   handleFilterChange = (e) => {
     this.setState({ filterText: e.target.value });

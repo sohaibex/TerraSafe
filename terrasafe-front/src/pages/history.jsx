@@ -6,7 +6,7 @@ const History = () => {
   const [itemsPerPage] = useState(5);
 
   useEffect(() => {
-    fetch('http://localhost:3000/earthquakes')
+    fetch('https://nestjs-app-gvqz5uatza-od.a.run.app/earthquakes')
       .then(response => response.json())
       .then(data => {
         setEarthquakeData(data);
