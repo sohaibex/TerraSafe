@@ -1,0 +1,13 @@
+# pvc-elasticsearch-master-0.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: elasticsearch-master-elasticsearch-master-0
+  namespace: elastic
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 30Gi
+  storageClassName: standard
