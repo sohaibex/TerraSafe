@@ -9,7 +9,7 @@ import { ElasticsearchModule } from '@nestjs/elasticsearch';
   imports: [
     HttpModule,
     ElasticsearchModule.register({
-      node: 'http://localhost:9200',
+      node: 'http://34.163.233.133:9200',
     }),
   ],
   providers: [ChatbotService, EarthquakeService, FirebaseService],
