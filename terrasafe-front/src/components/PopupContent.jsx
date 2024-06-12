@@ -65,13 +65,20 @@ const PopupContent = ({
 
   const handleChange = (e) => {
     const { name, type, value, checked } = e.target;
-    setFormState((prevState) => ({
-      ...prevState,
-      ingredients: {
-        ...prevState.ingredients,
-        [name]: type === "checkbox" ? checked : value,
-      },
-    }));
+    setFormState((prevState) => {
+      const updatedState = {
+        ...prevState,
+        ingredients: {
+          ...prevState.ingredients,
+          [name]: type === "checkbox" ? checked : value,
+        },
+      };
+      if (name === "additionalNeeds") {
+        updatedState.additionalNeeds = value;
+      }
+      console.log("Updated state:", updatedState);
+      return updatedState;
+    });
   };
 
   const handleImageUpload = (e) => {
