@@ -2,10 +2,24 @@ import React, { useState, useEffect } from "react";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { FacebookShareButton, TwitterShareButton, WhatsappShareButton, FacebookIcon, TwitterIcon, WhatsappIcon } from "react-share";
+import {
+  FacebookShareButton,
+  TwitterShareButton,
+  WhatsappShareButton,
+  FacebookIcon,
+  TwitterIcon,
+  WhatsappIcon,
+} from "react-share";
 import FullScreenImageModal from "./FullScreenImageModal"; // Import the modal component
 
-const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpRequestData, onClosePopup }) => {
+const PopupContent = ({
+  feature,
+  index,
+  ingredientChecklist, // Ensure this is correctly populated
+  onSubmit,
+  helpRequestData,
+  onClosePopup,
+}) => {
   const [formState, setFormState] = useState({
     ingredients: {},
     additionalNeeds: "",
@@ -18,17 +32,26 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
 
   useEffect(() => {
     if (helpRequestData) {
-      const updatedIngredients = ingredientChecklist.reduce((acc, item) => {
-        acc[item] = helpRequestData.stuffNeeded[item] || false;
-        return acc;
-      }, {});
+      console.log("helpRequestData received:", helpRequestData);
+      console.log("ingredientChecklist:", ingredientChecklist);
 
-      setFormState({
+      const updatedIngredients =
+        ingredientChecklist && ingredientChecklist.length > 0
+          ? ingredientChecklist.reduce((acc, item) => {
+              acc[item] = helpRequestData.stuffNeeded[item] || false;
+              return acc;
+            }, {})
+          : helpRequestData.stuffNeeded;
+
+      console.log("Updated Ingredients:", updatedIngredients); // Log updated ingredients
+
+      setFormState((prevState) => ({
+        ...prevState,
         ingredients: updatedIngredients,
         additionalNeeds: helpRequestData.additionalNeeds || "",
         images: helpRequestData.images || [],
         authoritiesContacts: helpRequestData.authoritiesContacts || "",
-      });
+      }));
     }
   }, [helpRequestData, ingredientChecklist]);
 
@@ -41,16 +64,16 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
   };
 
   const handleChange = (e) => {
-    const { name } = e.target;
+    const { name, type, value, checked } = e.target;
     setFormState((prevState) => ({
       ...prevState,
       ingredients: {
         ...prevState.ingredients,
-        [name]: !prevState.ingredients[name], // Toggle the value
+        [name]: type === "checkbox" ? checked : value,
       },
     }));
   };
-  
+
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
     setFormState((prevState) => ({
@@ -105,7 +128,9 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
   };
 
   // Prepare the URL and message for sharing
-  const stuffNeededList = Object.keys(effectiveHelpRequestData.stuffNeeded).join(", ");
+  const stuffNeededList = Object.keys(
+    effectiveHelpRequestData.stuffNeeded
+  ).join(", ");
   const shareUrl = window.location.href;
   const shareMessage = `Help needed for earthquake at ${place}. Ingredients required: ${stuffNeededList}. Coordinates: Latitude ${latitudeDMS}, Longitude ${longitudeDMS}.`;
 
@@ -126,29 +151,26 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
         <br />
       </div>
       <div className="help-request-data">
-        {effectiveHelpRequestData.stuffNeeded && (
+        {Object.keys(formState.ingredients).length > 0 && (
           <div className="ingredients-list">
-            {Object.keys(effectiveHelpRequestData.stuffNeeded).length > 0 ? (
-              <div className="ingredients-list">
-                <strong>Ingrédients nécessaires :</strong>
-                <br />
-                {Object.entries(effectiveHelpRequestData.stuffNeeded).map(([key, value], index) => (
+            <strong>Ingrédients nécessaires :</strong>
+            <br />
+            {Object.entries(formState.ingredients).map(
+              ([key, value], index) => {
+                console.log(`Checkbox ${key}:`, value); // Log checkbox state
+                return (
                   <div className="ingredient-item" key={key}>
                     <input
                       type="checkbox"
                       id={`check-${key}-${index}`}
                       name={key}
-                      checked={value }
+                      checked={value}
                       onChange={handleChange}
                     />
                     <label htmlFor={`check-${key}-${index}`}>{key}</label>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="no-ingredients-message">
-                Veuillez ajoutez les besoins nécessaires.
-              </div>
+                );
+              }
             )}
           </div>
         )}
@@ -164,7 +186,7 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
           <br />
           <br />
         </div>
-        
+
         <div className="picture-options">
           <strong>Envoyer des photos Options:</strong>
           <br />
@@ -178,18 +200,32 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
           <br />
         </div>
         <div className="images">
-          {effectiveHelpRequestData.images && effectiveHelpRequestData.images.length > 0 ? (
+          {effectiveHelpRequestData.images &&
+          effectiveHelpRequestData.images.length > 0 ? (
             effectiveHelpRequestData.images.length > 1 ? (
               <Slider {...sliderSettings}>
                 {effectiveHelpRequestData.images.map((image) => (
-                  <div key={image.id} className="image-item" onClick={() => handleImageClick(image)}>
+                  <div
+                    key={image.id}
+                    className="image-item"
+                    onClick={() => handleImageClick(image)}
+                  >
                     <img src={image.url} alt="place-damage" />
                   </div>
                 ))}
               </Slider>
             ) : (
-              <div key={effectiveHelpRequestData.images[0].id} className="image-item" onClick={() => handleImageClick(effectiveHelpRequestData.images[0])}>
-                <img src={effectiveHelpRequestData.images[0].url} alt="place-damage" />
+              <div
+                key={effectiveHelpRequestData.images[0].id}
+                className="image-item"
+                onClick={() =>
+                  handleImageClick(effectiveHelpRequestData.images[0])
+                }
+              >
+                <img
+                  src={effectiveHelpRequestData.images[0].url}
+                  alt="place-damage"
+                />
               </div>
             )
           ) : (
@@ -208,19 +244,19 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
         {isSubmitting ? "En cours..." : "Envoyer"}
       </button>
       {stuffNeededList && (
-      <div className="social-share">
-        <strong>Partager sur les réseaux:</strong>
-        <br />
-        <FacebookShareButton url={shareUrl} quote={shareMessage}>
-          <FacebookIcon size={32} round />
-        </FacebookShareButton>
-        <TwitterShareButton url={shareUrl} title={shareMessage}>
-          <TwitterIcon size={32} round />
-        </TwitterShareButton>
-        <WhatsappShareButton url={shareUrl} title={shareMessage}>
-          <WhatsappIcon size={32} round />
-        </WhatsappShareButton>
-      </div>
+        <div className="social-share">
+          <strong>Partager sur les réseaux:</strong>
+          <br />
+          <FacebookShareButton url={shareUrl} quote={shareMessage}>
+            <FacebookIcon size={32} round />
+          </FacebookShareButton>
+          <TwitterShareButton url={shareUrl} title={shareMessage}>
+            <TwitterIcon size={32} round />
+          </TwitterShareButton>
+          <WhatsappShareButton url={shareUrl} title={shareMessage}>
+            <WhatsappIcon size={32} round />
+          </WhatsappShareButton>
+        </div>
       )}
     </form>
   );
