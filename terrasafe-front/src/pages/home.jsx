@@ -34,11 +34,18 @@ export default class Home extends PureComponent {
   };
 
   componentDidMount() {
-    const map = L.map("map").setView([51.505, -0.09], 2);
+    this.map = L.map("map", {
+      maxBounds: [
+        [-90, -180],
+        [90, 180],
+      ],
+      maxBoundsViscosity: 1.0,
+    }).setView([51.505, -0.09], 2);
+
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "© OpenStreetMap contributors",
-    }).addTo(map);
-    this.fetchEarthquakeData(map);
+    }).addTo(this.map);
+    this.fetchEarthquakeData(this.map);
   }
 
   fetchEarthquakeData = (map) => {
@@ -54,7 +61,9 @@ export default class Home extends PureComponent {
   };
 
   fetchHelpRequestData = (id) => {
-    return fetch(`https://nestjs-app-gvqz5uatza-od.a.run.app/earthquakes/${id}/help-request`)
+    return fetch(
+      `https://nestjs-app-gvqz5uatza-od.a.run.app/earthquakes/${id}/help-request`
+    )
       .then((response) => {
         if (!response.ok) {
           throw new Error("Network response was not ok");
@@ -76,7 +85,7 @@ export default class Home extends PureComponent {
         return null;
       });
   };
-  
+
   addEarthquakeMarkers = (data, map) => {
     const defaultIcon = L.icon({
       iconUrl: markerIconPng,
@@ -86,25 +95,25 @@ export default class Home extends PureComponent {
       popupAnchor: [0, -41], // Position the popup above the icon
       shadowSize: [41, 41],
     });
-  
+
     const hoverIcon = L.icon({
       iconUrl: "/images/marker-icon-red.png",
       iconSize: [25, 41],
       iconAnchor: [12, 41], // Anchor the icon at the bottom center
       popupAnchor: [0, -41], // Position the popup above the icon
     });
-  
+
     const markers = {};
     let bounds = L.latLngBounds();
-  
+
     data.forEach((feature) => {
       const { _latitude, _longitude } = feature.coordinates;
       const id = feature.code;
-  
+
       const marker = L.marker([_latitude, _longitude], {
         icon: defaultIcon,
       }).addTo(map);
-  
+
       marker.on("mouseover", () => {
         this.fetchHelpRequestData(id).then((helpRequestData) => {
           const popupContainer = document.createElement("div");
@@ -117,24 +126,27 @@ export default class Home extends PureComponent {
               onSubmit={this.handleSubmit}
               onClosePopup={this.closePopup} // Pass closePopup as a prop
               helpRequestData={helpRequestData}
-              authoritiesContacts={helpRequestData ? helpRequestData.authoritiesContacts : ""}
+              authoritiesContacts={
+                helpRequestData ? helpRequestData.authoritiesContacts : ""
+              }
             />
           );
-          marker.bindPopup(popupContainer).openPopup();
+          marker.bindPopup(popupContainer, { maxWidth: 400 }).openPopup();
+          // Pan the map slightly to ensure the popup is fully visible
+          this.map.panBy([0, -100], { animate: true });
         });
       });
-  
+
       markers[id] = { marker, defaultIcon, hoverIcon };
       bounds.extend(marker.getLatLng());
     });
-  
+
     if (data.length > 0) {
       map.fitBounds(bounds);
     }
-  
+
     this.setState({ markers });
   };
-  
 
   convertDecimalToDMS = (decimal) => {
     const degrees = Math.floor(decimal);
@@ -146,32 +158,36 @@ export default class Home extends PureComponent {
 
   handleSubmit = (formState, id) => {
     return new Promise((resolve, reject) => {
-      const { ingredients, additionalNeeds, authoritiesContacts, images } = formState;
+      const { ingredients, additionalNeeds, authoritiesContacts, images } =
+        formState;
       const stuffNeededToHelp = {
         ...ingredients,
         [additionalNeeds]: false,
       };
-  
+
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const latitude = position.coords.latitude;
           const longitude = position.coords.longitude;
-  
+
           const helpRequest = {
             stuffNeeded: stuffNeededToHelp,
           };
-  
+
           const currentLocation = {
             latitude,
             longitude,
           };
-  
+
           const formData = new FormData();
           const method = this.state.hasHelpRequestData[id] ? "PUT" : "POST"; // Determine method based on state
-  
+
           if (method === "POST") {
             formData.append("helpRequest", JSON.stringify(helpRequest));
-            formData.append("authoritiesContacts", JSON.stringify(authoritiesContacts));
+            formData.append(
+              "authoritiesContacts",
+              JSON.stringify(authoritiesContacts)
+            );
             formData.append("currentLocation", JSON.stringify(currentLocation));
             images.forEach((image) => {
               formData.append("file", image); // Append file for POST request
@@ -182,11 +198,14 @@ export default class Home extends PureComponent {
               formData.append("file", image); // Append file for PUT request
             });
           }
-  
-          fetch(`https://nestjs-app-gvqz5uatza-od.a.run.app/earthquakes/${id}/help-request`, {
-            method,
-            body: formData,
-          })
+
+          fetch(
+            `https://nestjs-app-gvqz5uatza-od.a.run.app/earthquakes/${id}/help-request`,
+            {
+              method,
+              body: formData,
+            }
+          )
             .then((response) => {
               if (!response.ok) {
                 throw new Error("Network response was not ok");
@@ -209,9 +228,6 @@ export default class Home extends PureComponent {
       );
     });
   };
-  
-  
-  
 
   handleFilterChange = (e) => {
     this.setState({ filterText: e.target.value });
@@ -321,7 +337,10 @@ export default class Home extends PureComponent {
               onChange={this.handleFilterChange}
               style={{ marginBottom: "20px", width: "100%" }}
             />
-            <button onClick={this.toggleSortByMagnitude} className="sort-button">
+            <button
+              onClick={this.toggleSortByMagnitude}
+              className="sort-button"
+            >
               {this.state.sortByMagnitude
                 ? "Sort by Smallest Magnitude"
                 : "Sort by Largest Magnitude"}
