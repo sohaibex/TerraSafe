@@ -2,14 +2,12 @@ import React, { useState, useEffect } from "react";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import { FacebookShareButton, TwitterShareButton, WhatsappShareButton, FacebookIcon, TwitterIcon, WhatsappIcon } from "react-share";
 import FullScreenImageModal from "./FullScreenImageModal"; // Import the modal component
 
 const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpRequestData, onClosePopup }) => {
   const [formState, setFormState] = useState({
-    ingredients: ingredientChecklist.reduce((acc, item) => {
-      acc[item] = false;
-      return acc;
-    }, {}),
+    ingredients: {},
     additionalNeeds: "",
     images: [],
     authoritiesContacts: "",
@@ -20,12 +18,19 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
 
   useEffect(() => {
     if (helpRequestData) {
-      setFormState((prevState) => ({
-        ...prevState,
-        ...helpRequestData,
-      }));
+      const updatedIngredients = ingredientChecklist.reduce((acc, item) => {
+        acc[item] = helpRequestData.stuffNeeded[item] || false;
+        return acc;
+      }, {});
+
+      setFormState({
+        ingredients: updatedIngredients,
+        additionalNeeds: helpRequestData.additionalNeeds || "",
+        images: helpRequestData.images || [],
+        authoritiesContacts: helpRequestData.authoritiesContacts || "",
+      });
     }
-  }, [helpRequestData]);
+  }, [helpRequestData, ingredientChecklist]);
 
   const convertDecimalToDMS = (decimal) => {
     const degrees = Math.floor(decimal);
@@ -36,23 +41,16 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
   };
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    if (type === "checkbox") {
-      setFormState((prevState) => ({
-        ...prevState,
-        ingredients: {
-          ...prevState.ingredients,
-          [name]: checked,
-        },
-      }));
-    } else {
-      setFormState((prevState) => ({
-        ...prevState,
-        [name]: value,
-      }));
-    }
+    const { name } = e.target;
+    setFormState((prevState) => ({
+      ...prevState,
+      ingredients: {
+        ...prevState.ingredients,
+        [name]: !prevState.ingredients[name], // Toggle the value
+      },
+    }));
   };
-
+  
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
     setFormState((prevState) => ({
@@ -64,7 +62,7 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-  
+
     try {
       await onSubmit(formState, index, feature.coordinates);
       setIsSubmitting(false);
@@ -75,7 +73,6 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
       onClosePopup();
     }
   };
-  
 
   const place = feature.location;
   const latitude = feature.coordinates._latitude;
@@ -83,7 +80,6 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
   const latitudeDMS = convertDecimalToDMS(latitude);
   const longitudeDMS = convertDecimalToDMS(longitude);
 
-  // Use a default object if helpRequestData is null or undefined
   const defaultHelpRequestData = {
     stuffNeeded: {},
     images: [],
@@ -93,11 +89,11 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
 
   const handleImageClick = (image) => {
     setSelectedImage(image);
-    setIsModalOpen(true); // Open modal
+    setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
-    console.log("Closing modal...");
+    setIsModalOpen(false);
   };
 
   const sliderSettings = {
@@ -107,6 +103,11 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
     slidesToShow: 3,
     slidesToScroll: 2,
   };
+
+  // Prepare the URL and message for sharing
+  const stuffNeededList = Object.keys(effectiveHelpRequestData.stuffNeeded).join(", ");
+  const shareUrl = window.location.href;
+  const shareMessage = `Help needed for earthquake at ${place}. Ingredients required: ${stuffNeededList}. Coordinates: Latitude ${latitudeDMS}, Longitude ${longitudeDMS}.`;
 
   return (
     <form onSubmit={handleSubmit}>
@@ -127,21 +128,28 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
       <div className="help-request-data">
         {effectiveHelpRequestData.stuffNeeded && (
           <div className="ingredients-list">
-            <strong>Ingrédients nécessaires :</strong>
-            <br />
-            {Object.entries(effectiveHelpRequestData.stuffNeeded).map(([key, value]) => (
-              <div className="ingredient-item" key={key}>
-                <input
-                  type="checkbox"
-                  id={`check-${key}-${index}`}
-                  name={key}
-                  checked={value}
-                  onChange={handleChange}
-                />
-                <label htmlFor={`check-${key}-${index}`}>{key}</label>
+            {Object.keys(effectiveHelpRequestData.stuffNeeded).length > 0 ? (
+              <div className="ingredients-list">
+                <strong>Ingrédients nécessaires :</strong>
                 <br />
+                {Object.entries(effectiveHelpRequestData.stuffNeeded).map(([key, value], index) => (
+                  <div className="ingredient-item" key={key}>
+                    <input
+                      type="checkbox"
+                      id={`check-${key}-${index}`}
+                      name={key}
+                      checked={value }
+                      onChange={handleChange}
+                    />
+                    <label htmlFor={`check-${key}-${index}`}>{key}</label>
+                  </div>
+                ))}
               </div>
-            ))}
+            ) : (
+              <div className="no-ingredients-message">
+                Veuillez ajoutez les besoins nécessaires.
+              </div>
+            )}
           </div>
         )}
         <div className="additional-needs">
@@ -199,6 +207,21 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit, helpReque
       <button type="submit" disabled={isSubmitting}>
         {isSubmitting ? "En cours..." : "Envoyer"}
       </button>
+      {stuffNeededList && (
+      <div className="social-share">
+        <strong>Partager sur les réseaux:</strong>
+        <br />
+        <FacebookShareButton url={shareUrl} quote={shareMessage}>
+          <FacebookIcon size={32} round />
+        </FacebookShareButton>
+        <TwitterShareButton url={shareUrl} title={shareMessage}>
+          <TwitterIcon size={32} round />
+        </TwitterShareButton>
+        <WhatsappShareButton url={shareUrl} title={shareMessage}>
+          <WhatsappIcon size={32} round />
+        </WhatsappShareButton>
+      </div>
+      )}
     </form>
   );
 };
