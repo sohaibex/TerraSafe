@@ -4,11 +4,12 @@ import { EarthquakeController } from './earthquake.controller';
 import { FirebaseService } from '../firebase.service';
 import { HttpModule } from '@nestjs/axios';
 import { ElasticsearchModule } from '@nestjs/elasticsearch';
+
 @Module({
   imports: [
     HttpModule,
     ElasticsearchModule.register({
-      node: 'http://localhost:9200',
+      node: 'http://34.163.233.133:9200',
     }),
   ],
   providers: [EarthquakeService, FirebaseService],

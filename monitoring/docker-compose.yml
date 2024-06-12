@@ -1,13 +1,17 @@
-version: '3'
+version: '8.0'
+
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.7.1
-    container_name: elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.2.0
     environment:
-      - discovery.type=single-node
+      - node.name=es01
+      - discovery.seed_hosts=elasticsearch
+      - cluster.initial_master_nodes=es01
+      - cluster.name=docker-cluster
       - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms1024m -Xmx1024m"
-      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=true
+      - xpack.security.enrollment.enabled=true
     ulimits:
       memlock:
         soft: -1
@@ -16,18 +20,17 @@ services:
       - esdata:/usr/share/elasticsearch/data
     ports:
       - 9200:9200
-    networks:
-      - esnet
+      - 9300:9300
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:8.7.1
-    container_name: kibana
+    image: docker.elastic.co/kibana/kibana:8.2.0
     environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_HOSTS=https://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=kibana_password
+      - xpack.security.enrollment.enabled=true
     ports:
       - 5601:5601
-    networks:
-      - esnet
     depends_on:
       - elasticsearch
 
@@ -36,4 +39,6 @@ volumes:
     driver: local
 
 networks:
-  esnet:
+  default:
+    name: elastic
+    driver: bridge
