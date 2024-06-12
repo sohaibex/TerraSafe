@@ -40,6 +40,10 @@
     font-size: 1.5rem;
     cursor: pointer;
 }
+
+.leaflet-popup{
+    left: -150px !important;
+}
   
 .leaflet-popup-content{
     width: fit-content !important;
@@ -113,4 +117,11 @@
   
 .slick-list{
     max-width: 500px;
+}
+
+.social-share{
+    margin-top: 15px;
+    button:not(:first-child){
+        margin-right: 8px;
+    }
 }
