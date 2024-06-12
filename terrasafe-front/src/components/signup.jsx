@@ -17,6 +17,8 @@ const Signup = () => {
             // Signed in
             const user = userCredential.user;
             console.log(user);
+            // Save user info to local storage
+            localStorage.setItem('user', JSON.stringify(user));
             navigate("/")
             // ...
         })
