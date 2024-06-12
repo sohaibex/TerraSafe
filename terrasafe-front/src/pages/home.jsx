@@ -77,32 +77,34 @@ export default class Home extends PureComponent {
       });
   };
   
-
   addEarthquakeMarkers = (data, map) => {
     const defaultIcon = L.icon({
       iconUrl: markerIconPng,
       shadowUrl: markerIconShadow,
       iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
+      iconAnchor: [12, 41], // Anchor the icon at the bottom center
+      popupAnchor: [0, -41], // Position the popup above the icon
       shadowSize: [41, 41],
     });
-
+  
     const hoverIcon = L.icon({
       iconUrl: "/images/marker-icon-red.png",
+      iconSize: [25, 41],
+      iconAnchor: [12, 41], // Anchor the icon at the bottom center
+      popupAnchor: [0, -41], // Position the popup above the icon
     });
-
+  
     const markers = {};
     let bounds = L.latLngBounds();
-
+  
     data.forEach((feature) => {
       const { _latitude, _longitude } = feature.coordinates;
       const id = feature.code;
-
+  
       const marker = L.marker([_latitude, _longitude], {
         icon: defaultIcon,
       }).addTo(map);
-
+  
       marker.on("mouseover", () => {
         this.fetchHelpRequestData(id).then((helpRequestData) => {
           const popupContainer = document.createElement("div");
@@ -121,17 +123,18 @@ export default class Home extends PureComponent {
           marker.bindPopup(popupContainer).openPopup();
         });
       });
-
+  
       markers[id] = { marker, defaultIcon, hoverIcon };
       bounds.extend(marker.getLatLng());
     });
-
+  
     if (data.length > 0) {
       map.fitBounds(bounds);
     }
-
+  
     this.setState({ markers });
   };
+  
 
   convertDecimalToDMS = (decimal) => {
     const degrees = Math.floor(decimal);
