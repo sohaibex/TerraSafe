@@ -1,10 +1,17 @@
-FROM docker.elastic.co/elasticsearch/elasticsearch:8.7.1
+FROM docker.elastic.co/elasticsearch/elasticsearch:7.17.7
+
+# Disable security features
+RUN echo "xpack.security.enabled: false" >> /usr/share/elasticsearch/config/elasticsearch.yml
+
+# Ensure the necessary permissions
+RUN chown -R elasticsearch:elasticsearch /usr/share/elasticsearch/config/elasticsearch.yml
+
+# Set the environment variable for discovery type and network host
 ENV discovery.type=single-node
-ENV bootstrap.memory_lock=true
-ENV ES_JAVA_OPTS="-Xms1024m -Xmx1024m"
-ENV xpack.security.enabled=false
-ENV xpack.security.enrollment.enabled=false
-ENV xpack.security.http.ssl.enabled=false
-ENV xpack.security.transport.ssl.enabled=false
-EXPOSE 8080
-CMD ["sh", "-c", "bin/elasticsearch -E http.port=8080 -E xpack.security.enabled=false -E xpack.security.enrollment.enabled=false -E xpack.security.http.ssl.enabled=false -E xpack.security.transport.ssl.enabled=false"]
+ENV network.host=0.0.0.0
+
+# Expose the required ports
+EXPOSE 9200 9300
+
+# Start Elasticsearch
+CMD ["elasticsearch"]
