@@ -24,11 +24,13 @@ export default function Header() {
   const handleLogout = () => {
     signOut(auth).then(() => {
       // Sign-out successful.
+      localStorage.removeItem('user');
       navigate("/login");
       console.log("Signed out successfully");
-    }).catch((error) => {
-      // An error happened.
-    });
+      }).catch((error) => {
+          // An error happened.
+          console.error("Error signing out: ", error);
+      });
   }
 
   const handleGoFundMeClick = () => {

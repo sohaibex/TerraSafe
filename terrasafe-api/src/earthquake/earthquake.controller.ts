@@ -35,6 +35,12 @@ export class EarthquakeController {
     return this.earthquakeService.fetchAndStoreEarthquakes();
   }
 
+  @Get('all-with-help-requests')
+  @ApiOperation({ summary: 'Get all earthquakes with their help requests' })
+  async getAllEarthquakesWithHelpRequests() {
+    return this.earthquakeService.fetchAllEarthquakesWithHelpRequests();
+  }
+
   @Post(':id/help-request')
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({ summary: 'Add or update help request for an earthquake' })

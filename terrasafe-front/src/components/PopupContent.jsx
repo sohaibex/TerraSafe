@@ -1,14 +1,59 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import Slider from "react-slick";
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
+import {
+  FacebookShareButton,
+  TwitterShareButton,
+  WhatsappShareButton,
+  FacebookIcon,
+  TwitterIcon,
+  WhatsappIcon,
+} from "react-share";
+import FullScreenImageModal from "./FullScreenImageModal"; // Import the modal component
 
-const PopupContent = ({ feature, index, ingredientChecklist, onSubmit }) => {
+const PopupContent = ({
+  feature,
+  index,
+  ingredientChecklist, // Ensure this is correctly populated
+  onSubmit,
+  helpRequestData,
+  onClosePopup,
+}) => {
   const [formState, setFormState] = useState({
-    ingredients: ingredientChecklist.reduce((acc, item) => {
-      acc[item] = false;
-      return acc;
-    }, {}),
+    ingredients: {},
     additionalNeeds: "",
     images: [],
+    authoritiesContacts: "",
   });
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (helpRequestData) {
+      console.log("helpRequestData received:", helpRequestData);
+      console.log("ingredientChecklist:", ingredientChecklist);
+
+      const updatedIngredients =
+        ingredientChecklist && ingredientChecklist.length > 0
+          ? ingredientChecklist.reduce((acc, item) => {
+              acc[item] = helpRequestData.stuffNeeded[item] || false;
+              return acc;
+            }, {})
+          : helpRequestData.stuffNeeded;
+
+      console.log("Updated Ingredients:", updatedIngredients); // Log updated ingredients
+
+      setFormState((prevState) => ({
+        ...prevState,
+        ingredients: updatedIngredients,
+        additionalNeeds: helpRequestData.additionalNeeds || "",
+        images: helpRequestData.images || [],
+        authoritiesContacts: helpRequestData.authoritiesContacts || "",
+      }));
+    }
+  }, [helpRequestData, ingredientChecklist]);
 
   const convertDecimalToDMS = (decimal) => {
     const degrees = Math.floor(decimal);
@@ -19,21 +64,21 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit }) => {
   };
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    if (type === "checkbox") {
-      setFormState((prevState) => ({
+    const { name, type, value, checked } = e.target;
+    setFormState((prevState) => {
+      const updatedState = {
         ...prevState,
         ingredients: {
           ...prevState.ingredients,
-          [name]: checked,
+          [name]: type === "checkbox" ? checked : value,
         },
-      }));
-    } else {
-      setFormState((prevState) => ({
-        ...prevState,
-        [name]: value,
-      }));
-    }
+      };
+      if (name === "additionalNeeds") {
+        updatedState.additionalNeeds = value;
+      }
+      console.log("Updated state:", updatedState);
+      return updatedState;
+    });
   };
 
   const handleImageUpload = (e) => {
@@ -44,17 +89,57 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit }) => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSubmit(formState, index, feature.geometry.coordinates);
+    setIsSubmitting(true);
+
+    try {
+      await onSubmit(formState, index, feature.coordinates);
+      setIsSubmitting(false);
+      onClosePopup(); // Call the onClosePopup function
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      setIsSubmitting(false);
+      onClosePopup();
+    }
   };
 
-  const { coordinates } = feature.geometry;
-  const place = feature.properties.place;
-  const latitude = coordinates[1];
-  const longitude = coordinates[0];
+  const place = feature.location;
+  const latitude = feature.coordinates._latitude;
+  const longitude = feature.coordinates._longitude;
   const latitudeDMS = convertDecimalToDMS(latitude);
   const longitudeDMS = convertDecimalToDMS(longitude);
+
+  const defaultHelpRequestData = {
+    stuffNeeded: {},
+    images: [],
+  };
+
+  const effectiveHelpRequestData = helpRequestData || defaultHelpRequestData;
+
+  const handleImageClick = (image) => {
+    setSelectedImage(image);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const sliderSettings = {
+    dots: true,
+    infinite: false,
+    speed: 500,
+    slidesToShow: 3,
+    slidesToScroll: 2,
+  };
+
+  // Prepare the URL and message for sharing
+  const stuffNeededList = Object.keys(
+    effectiveHelpRequestData.stuffNeeded
+  ).join(", ");
+  const shareUrl = window.location.href;
+  const shareMessage = `Help needed for earthquake at ${place}. Ingredients required: ${stuffNeededList}. Coordinates: Latitude ${latitudeDMS}, Longitude ${longitudeDMS}.`;
 
   return (
     <form onSubmit={handleSubmit}>
@@ -72,47 +157,114 @@ const PopupContent = ({ feature, index, ingredientChecklist, onSubmit }) => {
         Longitude: {longitude} / E {longitudeDMS}
         <br />
       </div>
-      <div className="ingredients-list">
-        <strong>Ingrédients nécessaires :</strong>
-        <br />
-        {ingredientChecklist.map((item) => (
-          <div className="ingredient-item" key={item}>
-            <input
-              type="checkbox"
-              id={`check-${item}-${index}`}
-              name={item}
-              checked={formState.ingredients[item]}
-              onChange={handleChange}
-            />
-            <label htmlFor={`check-${item}-${index}`}>{item}</label>
+      <div className="help-request-data">
+        {Object.keys(formState.ingredients).length > 0 && (
+          <div className="ingredients-list">
+            <strong>Ingrédients nécessaires :</strong>
             <br />
+            {Object.entries(formState.ingredients).map(
+              ([key, value], index) => {
+                console.log(`Checkbox ${key}:`, value); // Log checkbox state
+                return (
+                  <div className="ingredient-item" key={key}>
+                    <input
+                      type="checkbox"
+                      id={`check-${key}-${index}`}
+                      name={key}
+                      checked={value}
+                      onChange={handleChange}
+                    />
+                    <label htmlFor={`check-${key}-${index}`}>{key}</label>
+                  </div>
+                );
+              }
+            )}
           </div>
-        ))}
+        )}
+        <div className="additional-needs">
+          <strong>Les besoins:</strong>
+          <br />
+          <input
+            type="text"
+            name="additionalNeeds"
+            value={formState.additionalNeeds}
+            onChange={handleChange}
+          />
+          <br />
+          <br />
+        </div>
+
+        <div className="picture-options">
+          <strong>Envoyer des photos Options:</strong>
+          <br />
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleImageUpload}
+          />
+          <br />
+          <br />
+        </div>
+        <div className="images">
+          {effectiveHelpRequestData.images &&
+          effectiveHelpRequestData.images.length > 0 ? (
+            effectiveHelpRequestData.images.length > 1 ? (
+              <Slider {...sliderSettings}>
+                {effectiveHelpRequestData.images.map((image) => (
+                  <div
+                    key={image.id}
+                    className="image-item"
+                    onClick={() => handleImageClick(image)}
+                  >
+                    <img src={image.url} alt="place-damage" />
+                  </div>
+                ))}
+              </Slider>
+            ) : (
+              <div
+                key={effectiveHelpRequestData.images[0].id}
+                className="image-item"
+                onClick={() =>
+                  handleImageClick(effectiveHelpRequestData.images[0])
+                }
+              >
+                <img
+                  src={effectiveHelpRequestData.images[0].url}
+                  alt="place-damage"
+                />
+              </div>
+            )
+          ) : (
+            "No images available."
+          )}
+        </div>
+        {isModalOpen && selectedImage && (
+          <FullScreenImageModal
+            image={selectedImage}
+            description={selectedImage.analysedImageDescription}
+            onClose={handleCloseModal}
+          />
+        )}
       </div>
-      <div className="additional-needs">
-        <strong>Les besoins:</strong>
-        <br />
-        <input
-          type="text"
-          name="additionalNeeds"
-          value={formState.additionalNeeds}
-          onChange={handleChange}
-        />
-        <br />
-        <br />
-      </div>
-      <div className="picture-options">
-        <strong>Envoyer des photos Options:</strong>
-        <br />
-        <input
-          type="file"
-          accept="image/*"
-          multiple
-          onChange={handleImageUpload}
-        />
-        <br />
-      </div>
-      <button type="submit">Submit</button>
+      <button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? "En cours..." : "Envoyer"}
+      </button>
+      {stuffNeededList && (
+        <div className="social-share">
+          <strong>Partager sur les réseaux:</strong>
+          <br />
+          <FacebookShareButton url={shareUrl} quote={shareMessage}>
+            <FacebookIcon size={32} round />
+          </FacebookShareButton>
+          <TwitterShareButton url={shareUrl} title={shareMessage}>
+            <TwitterIcon size={32} round />
+          </TwitterShareButton>
+          <WhatsappShareButton url={shareUrl} title={shareMessage}>
+            <WhatsappIcon size={32} round />
+          </WhatsappShareButton>
+        </div>
+      )}
     </form>
   );
 };

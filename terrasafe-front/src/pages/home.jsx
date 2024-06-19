@@ -1,11 +1,11 @@
 import React, { PureComponent } from "react";
+import { createRoot } from "react-dom/client";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import markerIconPng from "leaflet/dist/images/marker-icon.png";
 import markerIconShadow from "leaflet/dist/images/marker-shadow.png";
 import Chatbot from "../chatbot";
 import PopupContent from "../components/PopupContent";
-import ReactDOM from "react-dom";
 
 export default class Home extends PureComponent {
   state = {
@@ -17,30 +17,42 @@ export default class Home extends PureComponent {
     showModal: false,
     selectedEarthquake: null,
     earthquakeData: {},
-    ingredientChecklist: [
-      "Des tentes",
-      "Cheeseburgers",
-      "Insuline pour les Diabètes",
-    ],
+    ingredientChecklist: [],
     additionalNeeds: "",
     markers: {},
+    hasHelpRequestData: {},
+    helpRequests: {}, // Add a state property to store help-request data
+  };
+
+  // Inside the Home component
+  closePopup = () => {
+    const { markers } = this.state;
+    // Loop through all markers and close their popups
+    Object.values(markers).forEach(({ marker }) => {
+      marker.closePopup();
+    });
   };
 
   componentDidMount() {
-    const map = L.map("map").setView([51.505, -0.09], 2);
+    this.map = L.map("map", {
+      maxBounds: [
+        [-90, -180],
+        [90, 180],
+      ],
+      maxBoundsViscosity: 1.0,
+    }).setView([51.505, -0.09], 2);
+
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "© OpenStreetMap contributors",
-    }).addTo(map);
-    this.fetchEarthquakeData(map);
+    }).addTo(this.map);
+    this.fetchEarthquakeData(this.map);
   }
 
   fetchEarthquakeData = (map) => {
-    fetch(
-      "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson"
-    )
+    fetch("https://nestjs-app-gvqz5uatza-od.a.run.app/earthquakes")
       .then((response) => response.json())
       .then((data) => {
-        this.setState({ earthquakes: data.features });
+        this.setState({ earthquakes: data });
         this.addEarthquakeMarkers(data, map);
       })
       .catch((error) =>
@@ -48,49 +60,88 @@ export default class Home extends PureComponent {
       );
   };
 
+  fetchHelpRequestData = (id) => {
+    return fetch(
+      `https://nestjs-app-gvqz5uatza-od.a.run.app/earthquakes/${id}/help-request`
+    )
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        this.setState((prevState) => ({
+          helpRequests: { ...prevState.helpRequests, [id]: data },
+          hasHelpRequestData: { ...prevState.hasHelpRequestData, [id]: true }, // Update state
+        }));
+        return data;
+      })
+      .catch((error) => {
+        console.error("Error fetching help-request data:", error);
+        this.setState((prevState) => ({
+          hasHelpRequestData: { ...prevState.hasHelpRequestData, [id]: false }, // Update state
+        }));
+        return null;
+      });
+  };
+
   addEarthquakeMarkers = (data, map) => {
     const defaultIcon = L.icon({
       iconUrl: markerIconPng,
       shadowUrl: markerIconShadow,
       iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
+      iconAnchor: [12, 41], // Anchor the icon at the bottom center
+      popupAnchor: [0, -41], // Position the popup above the icon
       shadowSize: [41, 41],
     });
 
     const hoverIcon = L.icon({
       iconUrl: "/images/marker-icon-red.png",
+      iconSize: [25, 41],
+      iconAnchor: [12, 41], // Anchor the icon at the bottom center
+      popupAnchor: [0, -41], // Position the popup above the icon
     });
 
     const markers = {};
     let bounds = L.latLngBounds();
 
-    data.features.forEach((feature, index) => {
-      const { coordinates } = feature.geometry;
+    data.forEach((feature) => {
+      const { _latitude, _longitude } = feature.coordinates;
+      const id = feature.code;
 
-      const popupContainer = document.createElement("div");
-      ReactDOM.render(
-        <PopupContent
-          feature={feature}
-          index={index}
-          ingredientChecklist={this.state.ingredientChecklist}
-          onSubmit={this.handleSubmit}
-        />,
-        popupContainer
-      );
-
-      const marker = L.marker([coordinates[1], coordinates[0]], {
+      const marker = L.marker([_latitude, _longitude], {
         icon: defaultIcon,
-      })
-        .addTo(map)
-        .bindPopup(popupContainer);
+      }).addTo(map);
 
-      markers[index] = { marker, defaultIcon, hoverIcon };
+      marker.on("mouseover", () => {
+        this.fetchHelpRequestData(id).then((helpRequestData) => {
+          const popupContainer = document.createElement("div");
+          const root = createRoot(popupContainer);
+          root.render(
+            <PopupContent
+              feature={feature}
+              index={id}
+              ingredientChecklist={this.state.ingredientChecklist}
+              onSubmit={this.handleSubmit}
+              onClosePopup={this.closePopup} // Pass closePopup as a prop
+              helpRequestData={helpRequestData}
+              authoritiesContacts={
+                helpRequestData ? helpRequestData.authoritiesContacts : ""
+              }
+            />
+          );
+          marker.bindPopup(popupContainer, { maxWidth: 400 }).openPopup();
+          // Pan the map slightly to ensure the popup is fully visible
+          this.map.panBy([0, -100], { animate: true });
+        });
+      });
 
+      markers[id] = { marker, defaultIcon, hoverIcon };
       bounds.extend(marker.getLatLng());
     });
 
-    if (data.features.length > 0) {
+    if (data.length > 0) {
       map.fitBounds(bounds);
     }
 
@@ -105,59 +156,78 @@ export default class Home extends PureComponent {
     return `${degrees}° ${minutes}' ${seconds.toFixed(3)}''`;
   };
 
-  handleSubmit = (formState, index, coordinates) => {
-    const { ingredients, additionalNeeds, images } = formState;
-    const stuffNeededToHelp = {
-      ...ingredients,
-      [additionalNeeds]: false, // Adding additionalNeeds as a key with false value
-    };
+  handleSubmit = (formState, id) => {
+    return new Promise((resolve, reject) => {
+      const { ingredients, additionalNeeds, authoritiesContacts, images } =
+        formState;
+      const stuffNeededToHelp = {
+        ...ingredients,
+        [additionalNeeds]: false,
+      };
 
-    navigator.geolocation.getCurrentPosition(position => {
-        const latitude = position.coords.latitude;
-        const longitude = position.coords.longitude;
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const latitude = position.coords.latitude;
+          const longitude = position.coords.longitude;
 
-        const helpRequest = {
+          const helpRequest = {
             stuffNeeded: stuffNeededToHelp,
-            images: [], // images will be handled as files in the form data
-            analysedImageDescription: "", // Add appropriate description if needed
-        };
+          };
 
-        const currentLocation = {
+          const currentLocation = {
             latitude,
-            longitude
-        };
+            longitude,
+          };
 
-        const formData = new FormData();
-        formData.append("helpRequest", JSON.stringify(helpRequest));
-        formData.append("current_location", JSON.stringify(currentLocation));
-        images.forEach((image, idx) => {
-            formData.append(`file${idx}`, image);
-        });
+          const formData = new FormData();
+          const method = this.state.hasHelpRequestData[id] ? "PUT" : "POST"; // Determine method based on state
 
-        fetch(`/api/earthquakes/${index}/help-request`, {
-            method: "POST",
-            body: formData,
-        })
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error("Network response was not ok");
+          if (method === "POST") {
+            formData.append("helpRequest", JSON.stringify(helpRequest));
+            formData.append(
+              "authoritiesContacts",
+              JSON.stringify(authoritiesContacts)
+            );
+            formData.append("currentLocation", JSON.stringify(currentLocation));
+            images.forEach((image) => {
+              formData.append("file", image); // Append file for POST request
+            });
+          } else if (method === "PUT") {
+            formData.append("updateData", JSON.stringify(helpRequest));
+            images.forEach((image) => {
+              formData.append("file", image); // Append file for PUT request
+            });
+          }
+
+          fetch(
+            `https://nestjs-app-gvqz5uatza-od.a.run.app/earthquakes/${id}/help-request`,
+            {
+              method,
+              body: formData,
             }
-            return response.json();
-        })
-        .then((data) => {
-            console.log("Success:", data);
-        })
-        .catch((error) => {
-            console.error("Error:", error);
-        });
-
-        console.log("Form Data:", formData);
-    }, error => {
-        console.error("Error getting current location:", error);
-        // Handle error getting location here
+          )
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error("Network response was not ok");
+              }
+              return response.json();
+            })
+            .then((data) => {
+              console.log("Success:", data);
+              resolve(); // Resolve the promise on success
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              reject(error); // Reject the promise on error
+            });
+        },
+        (error) => {
+          console.error("Error getting current location:", error);
+          reject(error); // Reject the promise on error
+        }
+      );
     });
-};
-
+  };
 
   handleFilterChange = (e) => {
     this.setState({ filterText: e.target.value });
@@ -179,14 +249,10 @@ export default class Home extends PureComponent {
     } = this.state;
     const filtered = earthquakes
       .filter((earthquake) =>
-        earthquake.properties.place
-          .toLowerCase()
-          .includes(filterText.toLowerCase())
+        earthquake.location.toLowerCase().includes(filterText.toLowerCase())
       )
       .sort((a, b) =>
-        sortByMagnitude
-          ? b.properties.mag - a.properties.mag
-          : a.properties.mag - b.properties.mag
+        sortByMagnitude ? b.magnitude - a.magnitude : a.magnitude - b.magnitude
       );
 
     const indexOfLastItem = currentPage * itemsPerPage;
@@ -203,18 +269,18 @@ export default class Home extends PureComponent {
     const filteredEarthquakes = this.filterAndSortEarthquakes();
 
     return filteredEarthquakes.map((earthquake, index) => {
-      const { mag, place, time } = earthquake.properties;
-      const date = new Date(time).toLocaleString();
+      const { magnitude, location, timestamp, code } = earthquake;
+      const date = new Date(timestamp._seconds * 1000).toLocaleString();
 
       return (
         <div
-          key={index}
+          key={code} // Use code as the key
           className="earthquake-detail"
-          onMouseEnter={() => this.handleMarkerHover(index, true)}
-          onMouseLeave={() => this.handleMarkerHover(index, false)}
+          onMouseEnter={() => this.handleMarkerHover(code, true)} // Use code for hover
+          onMouseLeave={() => this.handleMarkerHover(code, false)} // Use code for hover
         >
-          <div className="magnitude">Magnitude: {mag}</div>
-          <div className="location">{place}</div>
+          <div className="magnitude">Magnitude: {magnitude}</div>
+          <div className="location">{location}</div>
           <div className="time">{date}</div>
         </div>
       );
@@ -243,11 +309,11 @@ export default class Home extends PureComponent {
     );
   };
 
-  handleMarkerHover = (index, isHovered) => {
+  handleMarkerHover = (id, isHovered) => {
     const { markers } = this.state;
-    if (markers[index]) {
-      markers[index].marker.setIcon(
-        isHovered ? markers[index].hoverIcon : markers[index].defaultIcon
+    if (markers[id]) {
+      markers[id].marker.setIcon(
+        isHovered ? markers[id].hoverIcon : markers[id].defaultIcon
       );
     }
   };

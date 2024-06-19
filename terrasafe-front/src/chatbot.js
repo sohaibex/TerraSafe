@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCamera, faUpload } from '@fortawesome/free-solid-svg-icons';
@@ -7,25 +7,40 @@ const Chatbot = () => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState({ latitude: 0, longitude: 0 });
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  const chatWithGPT3 = async (userInput) => {
-    const apiEndpoint = 'https://api.openai.com/v1/engines/gpt-3.5-turbo/completions';
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer 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`
-    };
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCurrentLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+      },
+      (error) => {
+        console.error('Error getting current location:', error);
+      }
+    );
+  }, []);
 
+  const chatWithBackend = async (userInput) => {
+    const apiEndpoint = 'https://nestjs-app-gvqz5uatza-od.a.run.app/chatbot/ask-question';
+    const userInfo = localStorage.getItem('user');
     const data = {
-      prompt: userInput,
-      max_tokens: 150
+      userId: userInfo ? JSON.parse(userInfo).uid : null,
+      question: userInput,
+      currentLocation: {
+        latitude: currentLocation.latitude,
+        longitude: currentLocation.longitude,
+      },
     };
 
     try {
-      const response = await axios.post(apiEndpoint, data, { headers });
-      return response.data.choices[0].text.trim();
+      const response = await axios.post(apiEndpoint, data);
+      return response.data.answer; // Accessing the answer property from the response object
     } catch (error) {
       console.error('Error communicating with the API:', error.message);
       return '';
@@ -39,7 +54,7 @@ const Chatbot = () => {
     setMessages((prevMessages) => [...prevMessages, userMessage]);
     const aiMessage = { text: '...', user: false };
     setMessages((prevMessages) => [...prevMessages, aiMessage]);
-    const response = await chatWithGPT3(input);
+    const response = await chatWithBackend(input);
     const newAiMessage = { text: response, user: false };
     setMessages((prevMessages) => [...prevMessages.slice(0, -1), newAiMessage]);
     setInput('');
